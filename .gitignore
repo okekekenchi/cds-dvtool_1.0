@@ -1,0 +1,13 @@
+# Virtual environment
+venv/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Database
+cds.db
+
+# Streamlit
+.streamlit/

@@ -1,0 +1,83 @@
+/* Main styling */
+.stApp {
+    background-color: #f5f5f5;
+    font-family: 'Arial', sans-serif;
+}
+
+.stAppHeader {
+  display: none !important;
+}
+
+/* Form styling */
+.stTextInput>div>div>input, 
+.stPassword>div>div>input {
+    border-radius: 5px;
+    padding: 10px;
+    border: 1px solid #ddd;
+}
+
+/* Link styling */
+a {
+    color: #e83757;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+
+/* Title styling */
+h1 {
+    color: #e83757;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+/* Error message styling */
+.error-message {
+    color: #f44336;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+/* Form container styling */
+.auth-container {
+    max-width: 400px !important;
+    margin: 0 auto;
+    padding: 2rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    background: white;
+}
+
+/* Button styling */
+.stButton>button {
+    background-color: #e83757 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 5px !important;
+    padding: 10px 24px !important;
+}
+
+.stButton>button:hover {
+    background-color: #d12b4a !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.stButton>button:active {
+    transform: translateY(0);
+}
+
+/* Input field styling */
+.stTextInput>div>div>input, 
+.stPassword>div>div>input {
+    border-radius: 5px !important;
+    padding: 10px !important;
+}
+
+/* Hide sidebar */
+section[data-testid="stSidebar"] {
+    display: none !important;
+}
