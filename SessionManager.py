@@ -18,6 +18,7 @@ class SessionManager:
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
             cursor.execute(dbquery.create_session())
+            cursor.execute(dbquery.clear_expired_session())
             conn.commit()
 
     def _generate_session_token(self):

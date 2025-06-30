@@ -52,7 +52,6 @@ def init_db():
     cursor = conn.cursor()
     
     cursor.execute(dbquery.create_user())
-    cursor.execute(dbquery.clear_expired_session())
     
     conn.commit()
     conn.close()
