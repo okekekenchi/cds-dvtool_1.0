@@ -21,3 +21,8 @@ SESSION_LIFETIME = 120 #minutes
 
 DATABASE_URL = ""
 DATABASE_NAME = "cds.db"
+
+# Router
+ROUTE_LOGIN = "pages/1_login.py"
+ROUTE_REGISTER = "pages/2_register.py"
+ROUTE_HOME = "pages/3_home.py"

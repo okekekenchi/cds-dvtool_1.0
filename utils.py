@@ -1,63 +1,50 @@
 import sqlite3
 import bcrypt
-import secrets
 import time
 import streamlit as st
 from functools import wraps
-from datetime import datetime, timedelta
 import config
 import dbquery
+from SessionManager import SessionManager
+from streamlit_cookies_manager import EncryptedCookieManager
+import uuid
 
-def get_active_session(request):
-    """Get session from browser cookie AND verify against database"""
-    from streamlit.web.server.websocket_headers import _get_websocket_headers
+def init_session_cookie():
+    st.session_state.current_page = None
+    sessions = SessionManager()
+    cookies = EncryptedCookieManager(
+        prefix = "cds_", 
+        password = "38#$@__!@#$%^&*()_81~!!@",
+    )
     
-    try:
-        headers = _get_websocket_headers()
-        cookies = headers.get("Cookie", "")
-        
-        # Extract session cookie
-        session_cookie = next(
-            (c.split("=")[1] for c in cookies.split("; ") 
-             if c.startswith("_streamlit_session_id=")),
-            None
+    if not cookies.ready():
+        st.markdown(
+            "<h5 style='text-align:center;'>🔄 Loading, please wait...</h5>",
+            unsafe_allow_html=True
         )
-        
-        if session_cookie:
-            conn = sqlite3.connect(config.DATABASE_NAME)
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT u.id, u.email, u.full_name 
-                FROM sessions s
-                JOIN users u ON s.user_id = u.id
-                WHERE s.session_id = ? AND s.expires_at > datetime('now')
-            ''', (session_cookie,))
-            return cursor.fetchone()
-    except:
-        return None
+        st.rerun()
+    
+    return sessions, cookies
 
-# Setup sessions
-def init_sessions():
-    if 'authenticated' not in st.session_state:
-        st.session_state.authenticated = False
-        st.session_state['page'] = 'login'
-    if 'user_name' not in st.session_state:
-        st.session_state.user_name = None
-    if 'user_email' not in st.session_state:
-        st.session_state.user_email = None
-    if 'session_token' not in st.session_state:
-        st.session_state.session_token = None
-    if 'session_id' not in st.session_state:
-        st.session_state.session_id = None
+def hide_nav_and_header():
+    st.markdown("""
+        <style>
+            section[data-testid="stSidebar"] {
+            display: none !important;
+            }
+            
+            .stAppHeader {
+            display: none !important;
+            }
         
-def set_session_state(user, session_id=None):
-    st.session_state.update({
-        'authenticated': True,
-        'user_id': user[0],
-        'user_email': user[1],
-        'user_name': user[2],
-        'session_id': session_id or headers["Cookie"].split("_streamlit_session_id=")[1].split(";")[0]
-    })
+            header[data-testid="stHeader"] {
+                display: none !important;
+            }
+            footer {
+                visibility: hidden;
+            }
+        </style>
+    """, unsafe_allow_html=True)
         
 # Database initialization
 def init_db():
@@ -65,28 +52,10 @@ def init_db():
     cursor = conn.cursor()
     
     cursor.execute(dbquery.create_user())
-    cursor.execute(dbquery.create_session())
     cursor.execute(dbquery.clear_expired_session())
     
     conn.commit()
     conn.close()
-
-# Session management
-def create_session(user_id):
-    conn = sqlite3.connect(config.DATABASE_NAME, check_same_thread=False)
-    cursor = conn.cursor()
-    
-    # Generate secure session token
-    session_id = secrets.token_urlsafe(32)
-    expires_at = datetime.now() + timedelta(hours=12)
-    
-    cursor.execute(
-        "INSERT INTO sessions (session_id, user_id, expires_at) VALUES (?, ?, ?)",
-        (session_id, user_id, expires_at)
-    )
-    conn.commit()
-    conn.close()
-    return session_id
 
 # Session management
 def clear_db():
@@ -99,31 +68,43 @@ def clear_db():
     conn.commit()
     conn.close()
 
-def valid_session(session_id):
-    """Check if user session is valid"""
-    if not session_id:
-        return None
+def delete_db_sessions(cookies=None):
+    if cookies:
+        session_id = cookies.get('session_id')
+    else:
+        session_id = st.session_state.session_id
     
-    conn = sqlite3.connect(config.DATABASE_NAME, check_same_thread=False)
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        SELECT u.id, u.email, u.full_name 
-        FROM sessions s
-        JOIN users u ON s.user_id = u.id
-        WHERE s.session_id = ? AND s.expires_at > datetime('now')
-    ''', (session_id,))
-    
-    user = cursor.fetchone()
-    conn.close()
-    return user
+    if (session_id):
+        conn = sqlite3.connect(config.DATABASE_NAME, check_same_thread=False)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
+        conn.commit()
+        conn.close()
 
-def delete_session(session_id):
-    conn = sqlite3.connect(config.DATABASE_NAME, check_same_thread=False)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
-    conn.commit()
-    conn.close()
+def logout(cookies=None, redirect=True):
+    delete_db_sessions(cookies)
+    st.session_state.clear()
+    clear_cookies(cookies)
+    
+    time.sleep(0.5)
+    if redirect:
+        st.switch_page(config.ROUTE_LOGIN)
+
+def login(email, password):
+    user = get_user_by_email(email)
+    
+    if user and verify_password(password, user[3]):
+        sessions = SessionManager()
+
+        if sessions.auth_session(st.session_state.session_id, user[0]):
+            return True
+            
+    return False
+    
+def clear_cookies(cookies: EncryptedCookieManager):
+    if cookies:
+        cookies.pop("session_id", None)
+        cookies.save()
 
 # Password hashing
 def hash_password(password):
@@ -144,9 +125,10 @@ def create_user(full_name, email, password):
     except sqlite3.IntegrityError:
         return False
     finally:
-        conn.close()        
+        conn.close()
 
-def get_user(email):
+def get_user_by_email(email):
+    """Gets user by email ID"""
     conn = sqlite3.connect(config.DATABASE_NAME)
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
@@ -154,27 +136,68 @@ def get_user(email):
     conn.close()
     return user
 
+def email_exists(email):
+    """Gets user by email ID"""
+
+    conn = sqlite3.connect(config.DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE id = ?', (email,))
+    user = cursor.fetchone()
+    conn.close()
+    return True if user else False
+
+def handle_session(user_id=None, forrce_new=False):
+    """Returns the session of the cuurent user"""
+    sessions, cookies = init_session_cookie()
+    set_session_cookie(sessions=sessions, cookies=cookies, user_id=user_id, force_new_cookie=forrce_new)
+    session = sessions.get_session(cookies.get('session_id'))
+    
+    if not session: # session exists in browser but not in DB
+        set_session_cookie(sessions=sessions, cookies=cookies, force_new_cookie=True)
+        session = sessions.get_session(cookies.get('session_id'))
+        
+    st.session_state.session_id = session['session_id']
+    
+    return session
+
+def auth():
+    """Checks if the user is authenticated"""
+    session = handle_session()
+    return True if session and session['user_id'] else False
+
 # Authentication decorator
-def login_required(func):
+def authenticated(func):
+    """Ensure that only authenticated users are allowed access to a function."""
     @wraps(func)
     def wrapper(*args, **kwargs):
-        session_id = st.session_state.get('session_id')
-        user = valid_session(session_id) if session_id else None
-        
-        if not user:
-            st.session_state.clear()
-            st.warning("Please login to access this page.")
-            st.switch_page("pages/1_login.py")
+        if not auth(): # the browser's session is valid and the user is authenticated
+            st.switch_page(config.ROUTE_LOGIN)
             return
-        
-        # Update session in state
-        st.session_state.user_id = user[0]
-        st.session_state.user_email = user[1]
-        st.session_state.user_name = user[2]
-        st.session_state.authenticated = True
         
         return func(*args, **kwargs)
     return wrapper
+
+# Guest decorator
+def guest(func):
+    """Ensure that only unauthenticated users are allowed access to a function. (Login, register pages)"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if auth(): # the browser's session is valid and the user is authenticated
+            st.switch_page(st.session_state.current_page or config.ROUTE_HOME)
+            return
+        return func(*args, **kwargs)
+    return wrapper
+
+def set_session_cookie(sessions: SessionManager, cookies: EncryptedCookieManager, user_id=None, force_new_cookie=True):
+  """Creates a new session if already not existing"""
+  if not cookies.get('session_id') or force_new_cookie:
+    session_id = sessions.create_session(user_id=user_id, payload={})
+    session = sessions.get_session(session_id)
+    
+    if session:
+        cookies['session_id'] = session_id
+        cookies.save()
+        time.sleep(0.3)  # Without delay, the cookie is not saved
 
 # Password strength check
 def is_password_strong(password):
@@ -187,12 +210,3 @@ def is_password_strong(password):
     if not any(char.islower() for char in password):
         return False, "Password must contain at least one lowercase letter"
     return True, "Password is strong"
-
-# Set page configuration
-def set_page_config():
-    st.set_page_config(
-        # page_title= st.session_state['page_title'],
-        page_icon="🔐",
-        layout="centered",
-        initial_sidebar_state="collapsed"
-    )

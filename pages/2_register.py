@@ -1,49 +1,51 @@
 import streamlit as st
-from utils import create_user, is_password_strong, get_user
 import re
+import time
+import config
+from utils import create_user, is_password_strong, email_exists, guest, hide_nav_and_header
 
-# Apply CSS styling
+st.set_page_config(page_title="Register", page_icon="📝", layout="centered", initial_sidebar_state="collapsed")
+
+# Apply CSS
 with open('style.css') as f:
     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-
-# Hide sidebar completely for registration page
-st.markdown("""
+    st.markdown("""
     <style>
-        section[data-testid="stSidebar"] {
-            display: none !important;
+        .stAppHeader { display: none; }        
+        section[data-testid="stSidebar"] { display: none !important; }
+        iframe { display: none !important; }
+        h1 { padding-top: 0; }
+
+        .stMainBlockContainer {
+            padding-top: 50px;
+            padding-bottom: 30px;
+        }
+
+        .st-emotion-cache-gsx7k2 {
+            width: 400px;
+            justify-self: center !important;
+            border: 1px solid lightgray;
+            border-radius: 2em;
+            padding: 20px;
         }
     </style>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-# Page configuration
-st.set_page_config(
-    page_title="Register",
-    page_icon="📝",
-    layout="centered",
-    initial_sidebar_state="collapsed"
-)
+@guest
+def main():
+    hide_nav_and_header()
+    st.session_state.current_page = config.ROUTE_REGISTER
+    st.title("Sign Up")
 
-# Check if already logged in
-if st.session_state.get('authenticated', False):
-    st.switch_page("pages/3_home.py")
+    full_name = st.text_input("Full Name", placeholder="Enter your full name")
+    email = st.text_input("Email", placeholder="example@domain.com")
+    password = st.text_input("Password", type="password", placeholder="********",
+                        help="At least 8 characters with 1 number, 1 uppercase, and 1 lowercase")
+    confirm_password = st.text_input("Confirm Password", type="password", placeholder="********")
 
-# Registration form container
-with st.container():
-    st.title("Create Account")
-    st.markdown('<div style="width:400px; max-width:400px; min-width:400px;">', unsafe_allow_html=True)
+    register_button = st.button("Register", type="primary", use_container_width=True)
 
-    # Form inputs
-    with st.form("registration_form"):
-        full_name = st.text_input("Full Name", placeholder="John Doe")
-        email = st.text_input("Email", placeholder="example@domain.com")
-        password = st.text_input("Password", type="password", placeholder="********",
-                               help="At least 8 characters with 1 number, 1 uppercase, and 1 lowercase")
-        confirm_password = st.text_input("Confirm Password", type="password", placeholder="********")
-        
-        submitted = st.form_submit_button("Register", type="primary")
-
-    # Registration logic
-    if submitted:
+    if register_button:
         # Client-side validation
         errors = []
         
@@ -53,7 +55,7 @@ with st.container():
         if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
             errors.append("Invalid email format")
             
-        if get_user(email):
+        if email_exists(email):
             errors.append("Email already registered")
             
         if password != confirm_password:
@@ -67,8 +69,8 @@ with st.container():
         if not errors:
             if create_user(full_name, email, password):
                 st.success("Account created successfully! Please login.")
-                # delay 3 secs
-                st.switch_page("pages/1_login.py")
+                time.sleep(3)
+                st.switch_page(config.ROUTE_LOGIN)
             else:
                 st.error("Registration failed - please try again")
         else:
@@ -82,5 +84,7 @@ with st.container():
             style="text-decoration:none; color:#e83757;">Login here</a>
         </div>
     """, unsafe_allow_html=True)
+            
+if __name__ == "__main__":
+    main()
     
-    st.markdown('</div>', unsafe_allow_html=True)

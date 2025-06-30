@@ -1,85 +1,150 @@
 import streamlit as st
-from utils import login_required, valid_session, delete_session
+from utils import authenticated, logout
 from datetime import datetime
+import time
+import config
+from streamlit_extras.colored_header import colored_header
+from streamlit_extras.let_it_rain import rain
+from PIL import Image
+import base64
+
+st.set_page_config(page_title="Dashboard", page_icon=":bar_chart:", layout="wide", initial_sidebar_state="expanded")
+
+PRIMARY_COLOR = "#e83757"
+SECONDARY_COLOR = "#381338"
+BG_COLOR = "#ffffff"
 
 # Apply CSS styling
 with open('style.css') as f:
     st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    st.markdown("""
+    <style>
+        .stMainBlockContainer {
+            padding-top: 0px;
+        }
+        
+        iframe {
+            display: none;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
-@login_required
+@authenticated
 def main():
-    # Page configuration
-    st.set_page_config(
-        page_title="Dashboard",
-        page_icon="🏠",
-        layout="centered"
-    )
-
-    # Sidebar - Only visible to authenticated users
+    st.session_state.current_page = config.ROUTE_REGISTER
+    
     with st.sidebar:
-        st.title(f"Welcome, {st.session_state.user_name}!")
-        st.markdown(f"Logged in as: `{st.session_state.user_email}`")
+        st.markdown(
+            f"""
+            <style>
+            .sidebar .sidebar-content {{
+                background-color: {SECONDARY_COLOR};
+                color: white;
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
         
-        # Session information
-        st.divider()
-        st.markdown("**Session Information**")
-        st.write(f"Last login: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        # User profile section
+        st.markdown(
+            f"""
+            <div style="padding: 1rem; border-bottom: 1px solid {PRIMARY_COLOR};">
+                <h2 style="color: {PRIMARY_COLOR};">Dashboard User</h2>
+                <h3>JOHN DON</h3>
+                <p>johndon@company.com</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
         
-        # Logout button
-        if st.button("Logout", type="primary", use_container_width=True):
-            delete_session(st.session_state.session_id)
-            st.session_state.clear()
-            st.success("Logged out successfully!")
-            st.switch_page("pages/1_login.py")
+        # Navigation links
+        nav_options = ["Dashboard", "Users", "Validation Checks", "Projects"]
+        selected = st.radio(
+            "Navigation",
+            nav_options,
+            label_visibility="collapsed"
+        )
+        
+        # Logout button with icon
+        if st.button("Logout", key="logout"):
+            st.session_state.logged_in = False
+            st.rerun()
+        
+        st.markdown(
+            """
+            <style>
+            div[data-testid="stRadio"] div {
+                color: white;
+            }
+            button[kind="secondary"] {
+                background-color: #e83757 !important;
+                color: white !important;
+                border: none;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
     # Main content area
-    st.title(f"Dashboard Overview")
-    st.markdown(f'<div class="container">', unsafe_allow_html=True)
-    
-    # Welcome message
-    st.subheader(f"Hello, {st.session_state.user_name}!")
-    st.markdown("""
-        Welcome to your personalized dashboard. Here's what's happening today:
-    """)
-    
-    # Sample dashboard content
-    col1, col2 = st.columns(2)
-    with col1:
-        with st.container(border=True):
-            st.markdown("### Your Stats")
-            st.metric("Active Projects", "3", "+1 from last week")
-            st.metric("Tasks Completed", "12", "80% completion rate")
-    
-    with col2:
-        with st.container(border=True):
-            st.markdown("### Recent Activity")
-            st.write("✔️ Completed project setup")
-            st.write("📅 Meeting at 2:00 PM today")
-            st.write("🔔 3 new notifications")
+    colored_header(
+        label=selected,
+        description="",
+        color_name="red-70"
+    )
 
-    # Additional content sections
-    st.divider()
-    st.markdown("### Quick Actions")
-    action_cols = st.columns(3)
-    with action_cols[0]:
-        if st.button("Create New Project", use_container_width=True):
-            st.info("Project creation would be implemented here")
-    with action_cols[1]:
-        if st.button("View Reports", use_container_width=True):
-            st.info("Reports would be implemented here")
-    with action_cols[2]:
-        if st.button("Account Settings", use_container_width=True):
-            st.info("Settings would be implemented here")
+    # Dashboard content
+    if selected == "Dashboard":
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            st.subheader("Earning")
+            st.markdown(f"<h1 style='color: {PRIMARY_COLOR};'>$ 628</h1>", unsafe_allow_html=True)
+            
+            metrics = {
+                "Share": "2434",
+                "Likes": "1259",
+                "Rating": "8.5"
+            }
+            
+            for metric, value in metrics.items():
+                st.metric(metric, value)
+        
+        with col2:
+            st.subheader("Result")
+            st.line_chart([30, 20, 15, 10, 25, 30, 35, 40, 35, 45, 50, 60, 70, 80, 90, 100, 150, 200, 250, 300])
+        
+        st.markdown("---")
+        st.button("Learn More", key="learn")
+        st.button("Check Now", key="check")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    elif selected == "Users":
+        st.write("Users management content goes here")
 
+    elif selected == "Validation Checks":
+        st.write("Validation checks content goes here")
 
+    elif selected == "Projects":
+        st.write("Projects content goes here")
+
+    # Add some visual effects
+    def add_logo():
+        st.markdown(
+            """
+            <style>
+                [data-testid="stSidebarNav"] {
+                    background-image: url(https://streamlit.io/images/brand/streamlit-mark-color.png);
+                    background-repeat: no-repeat;
+                    background-position: 20px 20px;
+                }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    add_logo()
 
 if __name__ == "__main__":
-    # Additional session validation on page load
-    if 'session_id' not in st.session_state or not valid_session(st.session_state.session_id):
-        # st.session_state.clear()
-        # st.switch_page("pages/1_login.py")
-        st.title("How are you")
-    else:
-        main()
+    main()
+    

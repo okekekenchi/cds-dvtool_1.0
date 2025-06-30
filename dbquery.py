@@ -22,7 +22,7 @@ def create_session():
     return '''
         CREATE TABLE IF NOT EXISTS sessions (
             session_id TEXT PRIMARY KEY,
-            user_id INTEGER,
+            user_id INTEGER NULL,
             ip_address TEXT NOT NULL,
             user_agent TEXT NOT NULL,
             payload TEXT NOT NULL,

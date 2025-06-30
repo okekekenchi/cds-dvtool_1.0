@@ -1,11 +1,7 @@
 /* Main styling */
 .stApp {
-    background-color: #f5f5f5;
+    background-color: white;
     font-family: 'Arial', sans-serif;
-}
-
-.stAppHeader {
-  display: none !important;
 }
 
 /* Form styling */
@@ -26,29 +22,11 @@ a:hover {
     text-decoration: underline;
 }
 
-
-/* Title styling */
-h1 {
-    color: #e83757;
-    text-align: center;
-    margin-bottom: 30px;
-}
-
 /* Error message styling */
 .error-message {
     color: #f44336;
     font-size: 14px;
     margin-top: 5px;
-}
-
-/* Form container styling */
-.auth-container {
-    max-width: 400px !important;
-    margin: 0 auto;
-    padding: 2rem;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    background: white;
 }
 
 /* Button styling */
@@ -77,7 +55,3 @@ h1 {
     padding: 10px !important;
 }
 
-/* Hide sidebar */
-section[data-testid="stSidebar"] {
-    display: none !important;
-}

@@ -1,14 +1,11 @@
 import sqlite3
 import config
 import dbquery
-import utils
 import sqlite3
 import bcrypt
 from datetime import datetime, timedelta
 import streamlit as st
-from user_agents import parse
-import urllib.parse
-import socket
+import uuid
 
 class SessionManager:
     def __init__(self, db_name=config.DATABASE_NAME, bcrypt_rounds=12):
@@ -28,7 +25,7 @@ class SessionManager:
         raw_token = bcrypt.gensalt(self.bcrypt_rounds)
         return bcrypt.hashpw(raw_token, bcrypt.gensalt(self.bcrypt_rounds)).decode('utf-8')
 
-    def _verify_session_token(self, session_id, token_to_verify):
+    def _verify_session_token(self, session_id):
         """Verify a session token"""
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
@@ -38,21 +35,17 @@ class SessionManager:
             ''', (session_id,))
             result = cursor.fetchone()
             
-            if result:
-                stored_token = result[0].encode('utf-8')
-                return bcrypt.checkpw(token_to_verify.encode('utf-8'), stored_token)
-            return False
+            return True if result else False
     
     def _get_client_info(self):
         """Get client IP and user agent from request headers"""
-        
         try:
             ctx = st.runtime.get_instance().script_run_ctx
             if ctx and hasattr(ctx, 'request'):
                 headers = ctx.request.headers
+                ip_address = headers.get('X-Forwarded-For', headers.get('X-Real-Ip', '127.0.0.1'))
                 user_agent = headers.get('User-Agent', 'Unknown')
-                ip_address = socket.gethostbyname(socket.gethostname())
-                return ip_address, user_agent
+                return ip_address.split(',')[0].strip(), user_agent
         except Exception:
             pass
         return '127.0.0.1', 'Unknown'
@@ -60,7 +53,7 @@ class SessionManager:
     def create_session(self, user_id=None, ip_address=None, user_agent=None,
                        payload=None, lifetime_minutes=config.SESSION_LIFETIME):
         """Create a new session with bcrypt-secured token"""
-        session_id = bcrypt.gensalt(self.bcrypt_rounds).decode('utf-8')[:64]
+        session_id = str(uuid.uuid4())
         session_token = self._generate_session_token()
         created_at = datetime.now()
         expires_at = created_at + timedelta(minutes=lifetime_minutes)
@@ -84,15 +77,11 @@ class SessionManager:
             
         return session_id
 
-    def get_session(self, session_id, token_to_verify=None):
+    def get_session(self, session_id):
         """Retrieve a session by ID with token verification"""
         with sqlite3.connect(self.db_name) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            
-            if token_to_verify:
-                if not self._verify_session_token(session_id, token_to_verify):
-                    return None
             
             cursor.execute('''
                 SELECT * FROM sessions 
@@ -100,13 +89,11 @@ class SessionManager:
             ''', (session_id,))
             result = cursor.fetchone()
             
-            if result:
-                return dict(result)
-            return None
+            return dict(result) if result else None
 
-    def update_session(self, session_id, payload=None, extend_lifetime=False, lifetime_minutes=None, token_to_verify=None):
+    def update_session(self, session_id, user_id=None, payload=None, extend_lifetime=False, lifetime_minutes=None):
         """Update an existing session with token verification"""
-        if token_to_verify and not self._verify_session_token(session_id, token_to_verify):
+        if not self._verify_session_token(session_id):
             return False
             
         updates = []
@@ -137,17 +124,27 @@ class SessionManager:
             ''', params)
             conn.commit()
             return cursor.rowcount > 0
-
-    def delete_session(self, session_id, token_to_verify=None):
-        """Delete a session with token verification"""
-        if token_to_verify and not self._verify_session_token(session_id, token_to_verify):
-            return False
-            
+    
+    def auth_session(self, session_id, user_id=None):
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
-            cursor.execute('DELETE FROM sessions WHERE session_id = ?', (session_id,))
+            cursor.execute(f'''
+                UPDATE sessions 
+                SET user_id = ?
+                WHERE session_id = ?
+            ''', (user_id, session_id))
             conn.commit()
             return cursor.rowcount > 0
+        
+    def delete_session(self, session_id):
+        if session_id:
+            with sqlite3.connect(self.db_name) as conn:
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM sessions WHERE session_id = ?', (session_id,))
+                conn.commit()
+                return cursor.rowcount > 0
+            
+        st.session_state.clear()
 
     def garbage_collect(self):
         """Clean up expired sessions"""
@@ -157,67 +154,3 @@ class SessionManager:
             conn.commit()
             return cursor.rowcount
 
-
-
-# Example usage in Streamlit with token management
-def main():
-    session_manager = SessionManager()
-    
-    # Initialize session token in state if not exists
-    if 'session_token' not in st.session_state:
-        st.session_state.session_token = None
-    
-    # Check for existing session
-    if 'session_id' in st.session_state:
-        session = session_manager.get_session(
-            st.session_state.session_id,
-            st.session_state.session_token
-        )
-        
-        if session:
-            st.success(f"Existing session loaded: {st.session_state.session_id}")
-            st.json({k: v for k, v in session.items() if k != 'session_token'})
-        else:
-            st.warning("Session expired or invalid")
-            del st.session_state.session_id
-            del st.session_state.session_token
-            st.rerun()
-    else:
-        # Create new session
-        user_agent = parse(st.experimental_get_query_params().get('user_agent', [''])[0])
-        session_id = session_manager.create_session(
-            user_id=None,
-            ip_address=st.experimental_get_query_params().get('ip', [''])[0],
-            user_agent=str(user_agent),
-            payload={'theme': 'dark', 'preferences': {}},
-            lifetime_minutes=120
-        )
-        
-        # Store both session ID and token
-        session = session_manager.get_session(session_id)
-        if session:
-            st.session_state.session_id = session_id
-            st.session_state.session_token = session['session_token']
-            st.success(f"New session created: {session_id}")
-    
-    # Session management UI
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("Extend Session"):
-            if session_manager.update_session(
-                st.session_state.session_id,
-                extend_lifetime=True,
-                token_to_verify=st.session_state.session_token
-            ):
-                st.success("Session extended by 120 minutes")
-    
-    with col2:
-        if st.button("Logout"):
-            session_manager.delete_session(
-                st.session_state.session_id,
-                st.session_state.session_token
-            )
-            del st.session_state.session_id
-            del st.session_state.session_token
-            st.rerun()
