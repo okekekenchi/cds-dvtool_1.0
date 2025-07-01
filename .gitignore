@@ -10,4 +10,5 @@ __pycache__/
 cds.db
 
 # Streamlit
-.streamlit/
+.streamlit/secret.toml
+

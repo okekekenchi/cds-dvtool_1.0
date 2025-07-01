@@ -45,7 +45,7 @@ def main():
         if not errors:
             if create_user(full_name, email, password):
                 st.success("Account created successfully! Please login.")
-                time.sleep(3)
+                time.sleep(2)
                 st.switch_page(config.ROUTE_LOGIN)
             else:
                 st.error("Registration failed - please try again")
