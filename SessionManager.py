@@ -97,4 +97,3 @@ class SessionManager:
             cursor.execute("DELETE FROM sessions WHERE expires_at <= datetime('now')")
             conn.commit()
             return cursor.rowcount
-
