@@ -1,6 +1,7 @@
 import streamlit as st
-import config
-from utils import login, guest, hide_nav_and_header, load_css
+from utils import login, guest, hide_nav_and_header
+from loader.config_loader import config
+from loader.css_loader import load_css
 
 st.set_page_config(page_title="Login", page_icon="🔒", layout="centered", initial_sidebar_state="collapsed")
 load_css('assets/css/login.css')
@@ -8,7 +9,7 @@ hide_nav_and_header()
 
 @guest
 def main():
-    st.session_state.current_page = config.ROUTE_LOGIN
+    st.session_state.current_page = config('route.login')
     st.title("Sign In")
     
     email = st.text_input("Email", placeholder="Enter your email")
@@ -20,7 +21,7 @@ def main():
             st.error("Please fill in all fields")
         else:
             if login(email, password):
-                st.switch_page(config.ROUTE_HOME)
+                st.switch_page(config('route.home'))
             else:
                 st.error("Invalid email or password")
 

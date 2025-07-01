@@ -2,7 +2,7 @@ import streamlit as st
 from PIL import Image
 from utils import get_user_by_id, logout, auth
 import os
-import config
+from loader.config_loader import config
 
 PRIMARY_COLOR = "#e83757"
 SECONDARY_COLOR = "#381338"
@@ -62,11 +62,11 @@ def side_nav():
             <p style='text-transform:uppercase; font-size:larger; text-align:center;
                 margin:0; color:#4f3f3f; font-family:sans-serif; width: 100%;
                 white-space:nowrap; text-overflow:ellipsis; overflow:hidden;'>
-                {user[1]}
+                {user.full_name}
             </p>
             <p style='text-align:center; font-size:small; font-style:italic; width: 100%;
                 white-space:nowrap; text-overflow:ellipsis; overflow:hidden;'>
-                <strong>{user[2]}</strong>
+                <strong>{user.email}</strong>
             </p>
             """, unsafe_allow_html=True
         )
@@ -74,7 +74,7 @@ def side_nav():
         # Logout button with icon
         if st.button("Logout", key="logout", icon=":material/logout:", use_container_width=True):
             logout()
-            st.switch_page(config.ROUTE_LOGIN)
+            st.switch_page(config('route.login'))
                     
         st.markdown(
             f"""<hr style="border: 1px solid {PRIMARY_COLOR};"/>""",

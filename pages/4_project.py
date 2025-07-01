@@ -1,6 +1,8 @@
 import streamlit as st
-from utils import authenticated, load_css
+from utils import authenticated
 from components.side_nav import side_nav
+from loader.config_loader import config
+from loader.css_loader import load_css
 
 st.set_page_config(page_title="Dashboard", page_icon=":bar_chart:", layout="wide", initial_sidebar_state="expanded")
 load_css('assets/css/project.css')

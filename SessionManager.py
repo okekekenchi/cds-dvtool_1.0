@@ -1,42 +1,24 @@
 import sqlite3
-import config
-import dbquery
 import sqlite3
-import bcrypt
 from datetime import datetime, timedelta
 import streamlit as st
 import uuid
+from loader.config_loader import config
+from database.database import get_db
+from models.session import Session
 
 class SessionManager:
-    def __init__(self, db_name=config.DATABASE_NAME, bcrypt_rounds=12):
+    def __init__(self, db_name=config('database.name'), bcrypt_rounds=12):
         self.db_name = db_name
         self.bcrypt_rounds = bcrypt_rounds
-        self._initialize_db()
+        self._clear_expired_sessions()
         
-    def _initialize_db(self):
+    def _clear_expired_sessions(self):
         """Initialize the database with the sessions table"""
         with sqlite3.connect(self.db_name) as conn:
             cursor = conn.cursor()
-            cursor.execute(dbquery.create_session())
-            cursor.execute(dbquery.clear_expired_session())
+            cursor.execute("DELETE FROM sessions WHERE expires_at < datetime('now')")
             conn.commit()
-
-    def _generate_session_token(self):
-        """Generate a secure session token using bcrypt"""
-        raw_token = bcrypt.gensalt(self.bcrypt_rounds)
-        return bcrypt.hashpw(raw_token, bcrypt.gensalt(self.bcrypt_rounds)).decode('utf-8')
-
-    def _verify_session_token(self, session_id):
-        """Verify a session token"""
-        with sqlite3.connect(self.db_name) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                SELECT session_token FROM sessions 
-                WHERE session_id = ? AND expires_at > datetime('now')
-            ''', (session_id,))
-            result = cursor.fetchone()
-            
-            return True if result else False
     
     def _get_client_info(self):
         """Get client IP and user agent from request headers"""
@@ -52,79 +34,40 @@ class SessionManager:
         return '127.0.0.1', 'Unknown'
 
     def create_session(self, user_id=None, ip_address=None, user_agent=None,
-                       payload=None, lifetime_minutes=config.SESSION_LIFETIME):
-        """Create a new session with bcrypt-secured token"""
-        session_id = str(uuid.uuid4())
-        session_token = self._generate_session_token()
-        created_at = datetime.now()
-        expires_at = created_at + timedelta(minutes=lifetime_minutes)
-        
-        if payload is None:
-            payload = {}
-            
+                       payload={}, lifetime_minutes=config('session.lifetime')):
+        """Create a new session"""
         if ip_address is None or user_agent is None:
             client_ip, client_ua = self._get_client_info()
             ip_address = ip_address or client_ip
             user_agent = user_agent or client_ua
         
-        with sqlite3.connect(self.db_name) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO sessions 
-                (session_id, user_id, ip_address, user_agent, payload, created_at, expires_at, session_token)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (session_id, user_id, ip_address, user_agent, str(payload), created_at, expires_at, session_token))
-            conn.commit()
+        session = None
+        with get_db() as db:
+            session = Session.create(
+                db,
+                id=str(uuid.uuid4()),
+                payload=payload,
+                user_id=user_id,
+                ip_address=ip_address,
+                user_agent=user_agent,
+                expires_at=datetime.now() + timedelta(minutes=lifetime_minutes)
+            )
             
-        return session_id
+        return session.id if session else None
 
     def get_session(self, session_id):
-        """Retrieve a session by ID with token verification"""
+        """Retrieve a session by ID"""
         with sqlite3.connect(self.db_name) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
             cursor.execute('''
                 SELECT * FROM sessions 
-                WHERE session_id = ? AND expires_at > datetime('now')
+                WHERE id = ? AND expires_at > datetime('now')
             ''', (session_id,))
             result = cursor.fetchone()
             
             return dict(result) if result else None
-
-    def update_session(self, session_id, user_id=None, payload=None, extend_lifetime=False, lifetime_minutes=None):
-        """Update an existing session with token verification"""
-        if not self._verify_session_token(session_id):
-            return False
-            
-        updates = []
-        params = []
-        
-        if payload is not None:
-            updates.append("payload = ?")
-            params.append(str(payload))
-            
-        if extend_lifetime or lifetime_minutes is not None:
-            if lifetime_minutes is None:
-                lifetime_minutes = 120
-            new_expiry = datetime.now() + timedelta(minutes=lifetime_minutes)
-            updates.append("expires_at = ?")
-            params.append(new_expiry)
-            
-        if not updates:
-            return False
-            
-        params.append(session_id)
-        
-        with sqlite3.connect(self.db_name) as conn:
-            cursor = conn.cursor()
-            cursor.execute(f'''
-                UPDATE sessions 
-                SET {', '.join(updates)} 
-                WHERE session_id = ?
-            ''', params)
-            conn.commit()
-            return cursor.rowcount > 0
     
     def auth_session(self, session_id, user_id=None):
         with sqlite3.connect(self.db_name) as conn:
@@ -132,7 +75,7 @@ class SessionManager:
             cursor.execute(f'''
                 UPDATE sessions 
                 SET user_id = ?
-                WHERE session_id = ?
+                WHERE id = ?
             ''', (user_id, session_id))
             conn.commit()
             return cursor.rowcount > 0
@@ -141,7 +84,7 @@ class SessionManager:
         if session_id:
             with sqlite3.connect(self.db_name) as conn:
                 cursor = conn.cursor()
-                cursor.execute('DELETE FROM sessions WHERE session_id = ?', (session_id,))
+                cursor.execute('DELETE FROM sessions WHERE id = ?', (session_id,))
                 conn.commit()
                 return cursor.rowcount > 0
             

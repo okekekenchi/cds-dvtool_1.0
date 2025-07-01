@@ -3,11 +3,11 @@ import bcrypt
 import time
 import streamlit as st
 from functools import wraps
-import config
-import dbquery
+from database.database import get_db
+from models.user import User
 from SessionManager import SessionManager
 from streamlit_cookies_manager import EncryptedCookieManager
-import uuid
+from loader.config_loader import config
 
 def init_session_cookie():
     st.session_state.current_page = None
@@ -44,20 +44,10 @@ def hide_nav_and_header():
             }
         </style>
     """, unsafe_allow_html=True)
-        
-# Database initialization
-def init_db():
-    conn = sqlite3.connect(config.DATABASE_NAME, check_same_thread=False)
-    cursor = conn.cursor()
-    
-    cursor.execute(dbquery.create_user())
-    
-    conn.commit()
-    conn.close()
 
 # Session management
 def clear_db():
-    conn = sqlite3.connect(config.DATABASE_NAME, check_same_thread=False)
+    conn = sqlite3.connect(config('database.name'), check_same_thread=False)
     cursor = conn.cursor()
     
     cursor.execute("DELETE TABLE users")
@@ -75,12 +65,13 @@ def logout(cookies=None):
     time.sleep(0.5)
 
 def login(email, password):
-    user = get_user_by_email(email)
+    with get_db() as db:
+        user = User.findByEmail(db, email)
     
-    if user and verify_password(password, user[3]):
+    if user and verify_password(password, user.password):
         sessions = SessionManager()
-        if sessions.auth_session(st.session_state.session_id, user[0]):
-            st.session_state.user_id = user[0]
+        if sessions.auth_session(st.session_state.session_id, user.id):
+            st.session_state.user_id = user.id
             return True
     return False
     
@@ -98,40 +89,26 @@ def verify_password(plain_password, hashed_password):
 
 # User management
 def create_user(full_name, email, password):
-    conn = sqlite3.connect(config.DATABASE_NAME)
-    cursor = conn.cursor()
-    try:
-        cursor.execute('INSERT INTO users (full_name, email, password) VALUES (?, ?, ?)',
-                       (full_name, email, hash_password(password)))
-        conn.commit()
-        return True
-    except sqlite3.IntegrityError:
-        return False
-    finally:
-        conn.close()
-
-def get_user_by_email(email):
-    """Gets user by email ID"""
-    conn = sqlite3.connect(config.DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
-    user = cursor.fetchone()
-    conn.close()
-    return user
+    with get_db() as db:
+        # Create a user
+        new_user = User.create(
+            db,
+            full_name=full_name,
+            email=email,
+            password=hash_password(password)
+        )
+    return new_user
 
 def get_user_by_id(id):
     """Gets user by ID"""
-    conn = sqlite3.connect(config.DATABASE_NAME)
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE id = ?', (id,))
-    user = cursor.fetchone()
-    conn.close()
+    with get_db() as db:
+        user = User.find(db, id)
     return user
 
 def email_exists(email):
     """Gets user by email ID"""
 
-    conn = sqlite3.connect(config.DATABASE_NAME)
+    conn = sqlite3.connect(config('database.name'))
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM users WHERE id = ?', (email,))
     user = cursor.fetchone()
@@ -167,7 +144,7 @@ def authenticated(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         if not auth(): # the browser's session is valid and the user is authenticated
-            st.switch_page(config.ROUTE_LOGIN)
+            st.switch_page(config('route.login'))
             return
         
         return func(*args, **kwargs)
@@ -179,7 +156,7 @@ def guest(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         if auth(): # the browser's session is valid and the user is authenticated
-            st.switch_page(st.session_state.current_page or config.ROUTE_HOME)
+            st.switch_page(st.session_state.current_page or config('route.home'))
             return
         return func(*args, **kwargs)
     return wrapper
@@ -188,12 +165,12 @@ def set_session_cookie(sessions: SessionManager, cookies: EncryptedCookieManager
     """Creates a new session if already not existing"""
     session_id = cookies.get('session_id')
     if not cookies.get('session_id') or force_new_cookie:
-        session_id = sessions.create_session(user_id=user_id, payload={})
+        session_id = sessions.create_session(user_id=user_id)
         
     session = sessions.get_session(session_id)
     
     if session:
-        st.session_state.session_id = session['session_id']
+        st.session_state.session_id = session['id']
         st.session_state.user_id = session['user_id']
         cookies['session_id'] = session_id
         cookies.save()
@@ -212,18 +189,3 @@ def is_password_strong(password):
     if not any(char.islower() for char in password):
         return False, "Password must contain at least one lowercase letter"
     return True, "Password is strong"
-
-@st.cache_resource  # Cache to prevent reloading on reruns
-def load_css(*filenames):
-    # Always load main.css
-    with open("assets/css/main.css") as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-    
-    if filenames:
-        try:
-            for file in filenames:
-                with open(file) as f:
-                    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-        except FileNotFoundError:
-                st.warning(f"CSS file not found: {file}")
-

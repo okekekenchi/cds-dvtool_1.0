@@ -1,8 +1,9 @@
 import streamlit as st
 import re
 import time
-import config
-from utils import create_user, is_password_strong, email_exists, guest, hide_nav_and_header, load_css
+from utils import create_user, is_password_strong, email_exists, guest, hide_nav_and_header
+from loader.config_loader import config
+from loader.css_loader import load_css
 
 st.set_page_config(page_title="Register", page_icon="📝", layout="centered", initial_sidebar_state="collapsed")
 load_css('assets/css/register.css')
@@ -10,7 +11,7 @@ hide_nav_and_header()
 
 @guest
 def main():
-    st.session_state.current_page = config.ROUTE_REGISTER
+    st.session_state.current_page = config('route.home')
     st.title("Sign Up")
 
     full_name = st.text_input("Full Name", placeholder="Enter your full name")
@@ -46,7 +47,7 @@ def main():
             if create_user(full_name, email, password):
                 st.success("Account created successfully! Please login.")
                 time.sleep(2)
-                st.switch_page(config.ROUTE_LOGIN)
+                st.switch_page(config('route.login'))
             else:
                 st.error("Registration failed - please try again")
         else:
