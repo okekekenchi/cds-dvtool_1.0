@@ -1,32 +1,13 @@
 import streamlit as st
 import config
-from utils import login, guest, hide_nav_and_header
+from utils import login, guest, hide_nav_and_header, load_css
 
 st.set_page_config(page_title="Login", page_icon="🔒", layout="centered", initial_sidebar_state="collapsed")
-
-# Apply CSS
-with open('style.css') as f:
-    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
-    st.markdown("""
-    <style>
-        .stAppHeader { display: none; }
-        section[data-testid="stSidebar"] { display: none !important; }
-        .stMainBlockContainer { padding-bottom: 0px; }
-        iframe { display: none; }
-
-        .st-emotion-cache-gsx7k2 {
-            width: 400px;
-            justify-self: center !important;
-            border: 1px solid lightgray;
-            border-radius: 2em;
-            padding: 20px;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+load_css('assets/css/login.css')
+hide_nav_and_header()
 
 @guest
 def main():
-    hide_nav_and_header()
     st.session_state.current_page = config.ROUTE_LOGIN
     st.title("Sign In")
     

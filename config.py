@@ -9,7 +9,6 @@ This file contains configuration settings for the application.
 """
 
 # --- Application Settings ---
-
 APP_NAME = "CDS Data Validation Tool"
 APP_VERSION = "1.0.0"
 DEBUG_MODE = True
@@ -18,7 +17,6 @@ DEBUG_MODE = True
 SESSION_LIFETIME = 120 #minutes
 
 # --- Database Settings ---
-
 DATABASE_URL = ""
 DATABASE_NAME = "cds.db"
 

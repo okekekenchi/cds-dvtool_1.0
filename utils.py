@@ -11,7 +11,6 @@ import uuid
 
 def init_session_cookie():
     st.session_state.current_page = None
-    sessions = SessionManager()
     cookies = EncryptedCookieManager(
         prefix = "cds_", 
         password = "38#$@__!@#$%^&*()_81~!!@",
@@ -24,7 +23,7 @@ def init_session_cookie():
         )
         st.rerun()
     
-    return sessions, cookies
+    return cookies
 
 def hide_nav_and_header():
     st.markdown("""
@@ -67,37 +66,22 @@ def clear_db():
     conn.commit()
     conn.close()
 
-def delete_db_sessions(cookies=None):
-    if cookies:
-        session_id = cookies.get('session_id')
-    else:
-        session_id = st.session_state.session_id
-    
-    if (session_id):
-        conn = sqlite3.connect(config.DATABASE_NAME, check_same_thread=False)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
-        conn.commit()
-        conn.close()
-
-def logout(cookies=None, redirect=True):
-    delete_db_sessions(cookies)
+def logout(cookies=None):
+    sessions = SessionManager()
+    sessions.delete_session(st.session_state.session_id)
     st.session_state.clear()
-    clear_cookies(cookies)
     
+    clear_cookies(cookies)
     time.sleep(0.5)
-    if redirect:
-        st.switch_page(config.ROUTE_LOGIN)
 
 def login(email, password):
     user = get_user_by_email(email)
     
     if user and verify_password(password, user[3]):
         sessions = SessionManager()
-
         if sessions.auth_session(st.session_state.session_id, user[0]):
+            st.session_state.user_id = user[0]
             return True
-            
     return False
     
 def clear_cookies(cookies: EncryptedCookieManager):
@@ -135,6 +119,15 @@ def get_user_by_email(email):
     conn.close()
     return user
 
+def get_user_by_id(id):
+    """Gets user by ID"""
+    conn = sqlite3.connect(config.DATABASE_NAME)
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE id = ?', (id,))
+    user = cursor.fetchone()
+    conn.close()
+    return user
+
 def email_exists(email):
     """Gets user by email ID"""
 
@@ -146,21 +139,25 @@ def email_exists(email):
     return True if user else False
 
 def handle_session(user_id=None, forrce_new=False):
-    """Returns the session of the cuurent user"""
-    sessions, cookies = init_session_cookie()
-    set_session_cookie(sessions=sessions, cookies=cookies, user_id=user_id, force_new_cookie=forrce_new)
-    session = sessions.get_session(cookies.get('session_id'))
+    """Returns the session of the curent user"""
+    sessions = SessionManager()
+    if 'session_id' not in st.session_state: # fresh page load
+        cookies = init_session_cookie()
+        session = set_session_cookie(sessions=sessions, cookies=cookies,
+                                     user_id=user_id, force_new_cookie=forrce_new)
+    else:
+        session = sessions.get_session(st.session_state.session_id)
     
     if not session: # session exists in browser but not in DB
-        set_session_cookie(sessions=sessions, cookies=cookies, force_new_cookie=True)
-        session = sessions.get_session(cookies.get('session_id'))
+        session = set_session_cookie(sessions=sessions, cookies=cookies, force_new_cookie=True)
         
-    st.session_state.session_id = session['session_id']
-    
     return session
 
 def auth():
     """Checks if the user is authenticated"""
+    if 'user_id' in st.session_state and st.session_state.user_id:
+        return True
+    
     session = handle_session()
     return True if session and session['user_id'] else False
 
@@ -188,15 +185,21 @@ def guest(func):
     return wrapper
 
 def set_session_cookie(sessions: SessionManager, cookies: EncryptedCookieManager, user_id=None, force_new_cookie=True):
-  """Creates a new session if already not existing"""
-  if not cookies.get('session_id') or force_new_cookie:
-    session_id = sessions.create_session(user_id=user_id, payload={})
+    """Creates a new session if already not existing"""
+    session_id = cookies.get('session_id')
+    if not cookies.get('session_id') or force_new_cookie:
+        session_id = sessions.create_session(user_id=user_id, payload={})
+        
     session = sessions.get_session(session_id)
     
     if session:
+        st.session_state.session_id = session['session_id']
+        st.session_state.user_id = session['user_id']
         cookies['session_id'] = session_id
         cookies.save()
         time.sleep(0.3)  # Without delay, the cookie is not saved
+    
+    return session
 
 # Password strength check
 def is_password_strong(password):
@@ -209,3 +212,18 @@ def is_password_strong(password):
     if not any(char.islower() for char in password):
         return False, "Password must contain at least one lowercase letter"
     return True, "Password is strong"
+
+@st.cache_resource  # Cache to prevent reloading on reruns
+def load_css(*filenames):
+    # Always load main.css
+    with open("assets/css/main.css") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    
+    if filenames:
+        try:
+            for file in filenames:
+                with open(file) as f:
+                    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+        except FileNotFoundError:
+                st.warning(f"CSS file not found: {file}")
+

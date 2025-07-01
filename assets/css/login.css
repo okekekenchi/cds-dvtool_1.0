@@ -1,0 +1,27 @@
+.stAppHeader {
+    display: none;
+}
+
+section[data-testid="stSidebar"] {
+    display: none !important;
+}
+
+.stMainBlockContainer {
+    padding-bottom: 20px
+}
+
+iframe {
+    display: none;
+}
+
+h1 {
+    text-align: center;
+}
+
+.st-emotion-cache-gsx7k2 {
+    width: 400px;
+    justify-self: center !important;
+    border: 1px solid lightgray;
+    border-radius: 2em;
+    padding: 20px;
+}
