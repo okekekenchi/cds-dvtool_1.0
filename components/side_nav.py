@@ -79,7 +79,7 @@ def side_nav():
         st.markdown(
             f"""<hr style="border: 1px solid {PRIMARY_COLOR};"/>""",
             unsafe_allow_html=True
-        )        
+        )
         
     path = "pages"
     st.sidebar.page_link(f"{path}/3_home.py", label="Dashboard", icon=":material/dashboard:"),
@@ -88,4 +88,4 @@ def side_nav():
     st.sidebar.page_link(f"{path}/5_validation_check.py", label="Validation Checks", icon=":material/check_circle:"),
     st.sidebar.page_link(f"{path}/6_users.py", label="Users", icon=":material/groups:"),                
     st.sidebar.page_link(f"{path}/7_account.py", label="My account", icon=":material/account_circle:"),
-        
+    
