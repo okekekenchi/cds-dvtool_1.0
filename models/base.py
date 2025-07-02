@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, DateTime, event, text
+from sqlalchemy import Column, Integer, DateTime, event
 from datetime import datetime
 from database.database import Base, engine
 import pytz
@@ -10,11 +10,14 @@ class BaseModel(Base):
   created_at = Column(DateTime, default=lambda: datetime.now(pytz.utc))
   updated_at = Column(DateTime, default=lambda: datetime.now(pytz.utc), 
                       onupdate=lambda: datetime.now(pytz.utc))
+  
+  _default = {}
 
   @classmethod
   def create(cls, db, **kwargs):
     """Create new record"""
-    instance = cls(**kwargs)
+    merged = {**cls._default, **kwargs}
+    instance = cls(**merged)
     db.add(instance)
     db.commit()
     db.refresh(instance)

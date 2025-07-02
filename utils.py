@@ -8,6 +8,7 @@ from models.user import User
 from SessionManager import SessionManager
 from streamlit_cookies_manager import EncryptedCookieManager
 from loader.config_loader import config
+import importlib
 
 def init_session_cookie():
     st.session_state.current_page = None
@@ -189,3 +190,10 @@ def is_password_strong(password):
     if not any(char.islower() for char in password):
         return False, "Password must contain at least one lowercase letter"
     return True, "Password is strong"
+
+
+def get_model_class(model_name):
+    module = importlib.import_module(f"models.{model_name}")
+    # Assumes class name matches module name in CamelCase
+    class_name = ''.join([part.capitalize() for part in model_name.split('_')])
+    return getattr(module, class_name)
