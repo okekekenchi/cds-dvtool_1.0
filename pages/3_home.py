@@ -11,9 +11,7 @@ load_css('assets/css/dashboard.css')
 def main():
     st.session_state.current_page = config('route.home')
     side_nav()
-    st.title('welcome home')
-    st.title(config('master.xb_lcn_indenture'))
-    
+    st.title('welcome home')    
     
     
 if __name__ == "__main__":
