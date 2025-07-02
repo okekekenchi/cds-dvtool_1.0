@@ -8,7 +8,7 @@ from models.bh_task_type_vs_mb import BhTaskTypeVsMb
 from models.ca_scheduled_task import CaScheduledTask
 from models.ca_task_code_interval import CaTaskCodeInterval
 from models.ca_task_code_vs_hg_smr_code import CaTaskCodeVsHgSmrCode
-from models.ca_task_code_vs_task_id import CaTaskCodeVsTaskIds
+from models.ca_task_code_vs_task_id import CaTaskCodeVsTaskId
 from models.hg_smr_vs_icc import HgSmrVsIcc
 from models.xb_lcn_indenture import XbLcnIndenture
 from utils import get_model_class
