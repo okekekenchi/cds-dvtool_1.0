@@ -249,7 +249,7 @@ def main():
         # Show action buttons for selected row
         with action_placeholder.container(): 
             if st.session_state.selected_row:                
-                col1, col2, _ = st.columns([1.5,1.6,5], vertical_alignment="center")
+                col1, col2, _ = st.columns([2,2, 6], vertical_alignment="center")
                 with col1:
                     if st.button("Edit Record", icon=":material/edit:"):
                         st.session_state.edit_record = st.session_state.selected_row
