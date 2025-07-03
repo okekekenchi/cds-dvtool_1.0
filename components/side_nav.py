@@ -3,6 +3,7 @@ from PIL import Image
 from utils import get_user_by_id, logout, auth
 import os
 from loader.config_loader import config
+from loader.css_loader import load_css
 
 PRIMARY_COLOR = "#e83757"
 SECONDARY_COLOR = "#381338"
@@ -16,37 +17,14 @@ def side_nav():
     
     if not user:
         return
-    
+    load_css('assets/css/side_nav.css')
     with st.sidebar:
         st.markdown(f"""
             <style>
             .sidebar .sidebar-content {{
-                background-color: {SECONDARY_COLOR};
+                background-color: {config('theme.secondary')};
                 color: white;
             }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-        
-        st.markdown("""
-            <style>
-                .st-emotion-cache-1iuhdj4 { display: none !important; }
-                .st-emotion-cache-8atqhb { justify-items: center !important; }
-                hr { margin: 0px !important; }
-                .st-emotion-cache-1h08hrp {
-                    width: -webkit-fill-available !important;
-                    height: 30px !important;
-                    min-height: 30px !important;
-                    padding: 0px !important;
-                    margin: 0px !important;
-                }
-                .st-emotion-cache-1kwt99k { display: flex !important; height: 30px !important; }
-                .st-emotion-cache-1h08hrp > p { margin-top: -9px !important; }
-                .st-emotion-cache-595tnf  {
-                    right: 0px!important;
-                    position: absolute!important;
-                }
             </style>
             """,
             unsafe_allow_html=True
@@ -85,7 +63,6 @@ def side_nav():
     st.sidebar.page_link(f"{path}/3_home.py", label="Dashboard", icon=":material/dashboard:"),
     st.sidebar.page_link(f"{path}/4_project.py", label="My Projects", icon=":material/folder:"),
     st.sidebar.page_link(f"{path}/8_masters.py", label="Masters", icon=":material/settings:"),
-    st.sidebar.page_link(f"{path}/5_validation_check.py", label="Validation Checks", icon=":material/check_circle:"),
     st.sidebar.page_link(f"{path}/6_users.py", label="Users", icon=":material/groups:"),                
     st.sidebar.page_link(f"{path}/7_account.py", label="My account", icon=":material/account_circle:"),
     

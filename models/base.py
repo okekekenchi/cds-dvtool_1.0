@@ -34,7 +34,39 @@ class BaseModel(Base):
     return db.query(cls).get(id)
   
   @classmethod
-  def where(cls, db, **filters):
+  def where(cls, db, columns=None, **filters):
+    """
+    Filter records with optional column selection
+    
+    Args:
+        db: SQLAlchemy session
+        columns: List of columns to select (None returns full objects)
+        filters: Key-value pairs for filtering
+    
+    Returns:
+      SQLAlchemy session
+    """
+    query = db.query(cls)
+    
+    if columns:
+        if isinstance(columns, str):
+            columns = [columns]  # Convert single string to list
+        
+        selected = [getattr(cls, col) for col in columns]
+        query = query.with_entities(*selected)
+        
+        # Convert to list of dicts
+        result = query.filter_by(**filters).all()
+        return [dict(zip(columns, row)) for row in result]
+    
+    # Apply filters if any
+    if filters:
+        query = query.filter_by(**filters)
+        
+    return query
+  
+  @classmethod
+  def datatable(cls, db, **filters):
     """Filter records"""
     return db.query(cls).filter_by(**filters)
   

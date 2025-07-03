@@ -9,6 +9,7 @@ from SessionManager import SessionManager
 from streamlit_cookies_manager import EncryptedCookieManager
 from loader.config_loader import config
 import importlib
+from models.base import BaseModel
 
 def init_session_cookie():
     st.session_state.current_page = None
@@ -103,8 +104,7 @@ def create_user(full_name, email, password):
 def get_user_by_id(id):
     """Gets user by ID"""
     with get_db() as db:
-        user = User.find(db, id)
-    return user
+        return User.find(db, id)
 
 def email_exists(email):
     """Gets user by email ID"""
@@ -192,7 +192,7 @@ def is_password_strong(password):
     return True, "Password is strong"
 
 
-def get_model_class(model_name):
+def get_model_class(model_name) -> BaseModel:
     module = importlib.import_module(f"models.{model_name}")
     # Assumes class name matches module name in CamelCase
     class_name = ''.join([part.capitalize() for part in model_name.split('_')])
