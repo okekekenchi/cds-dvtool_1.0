@@ -38,6 +38,10 @@ def init_session_var():
     st.session_state.selected_row = None
   if "active_records" not in st.session_state:
     st.session_state.active_records = True
+    
+def load_task_types():
+    with get_db() as db:
+        return BhTaskType.where(db, ["id","task_type","desc"], **{"active":True})
 
 def field_name(field: str):
     f_name =  f"{field} *" if field in required_fields else field
@@ -119,13 +123,11 @@ def form_fields(data):
             if col in bool_fields:
                 data[col] = st.checkbox(field_name(col), value=current_value or True)
             elif col == "task_type_id":
-                with get_db() as db:
-                    task_types = BhTaskType.where(db, ["id","task_type","desc"], **{"active":True})
-                    options = { item['id']: f"{item['task_type']} - {item['desc']}" for item in task_types }
-                    data[col] = st.selectbox("Select a task type",
-                                             options=options.keys(),
-                                             index=list(options.keys()).index(current_value) or 0,
-                                             format_func=lambda x: options[x])
+                options = { item['id']: f"{item['task_type']} - {item['desc']}" for item in load_task_types() }
+                data[col] = st.selectbox("Select a task type",
+                                            options=options.keys(),
+                                            index=list(options.keys()).index(current_value) if current_value else 0,
+                                            format_func=lambda x: options[x])
             else:
                 data[col] = st.text_input(field_name(col), value=current_value)
     return data
@@ -229,6 +231,8 @@ def main():
         # Format Created By
         users = pd.read_sql("SELECT id, full_name FROM users", engine)
         user_map = dict(zip(users['id'], users['full_name']))
+        user_map
+        # task_types
         df['created_by'] = df['created_by'].map(user_map).fillna("System").replace("", "System")
 
         if not df.empty:
