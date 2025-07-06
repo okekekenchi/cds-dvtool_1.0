@@ -1,5 +1,5 @@
 import streamlit as st
-from utils import authenticated, get_model_class, get_user_by_id
+from utils import authenticated, get_model_class
 from components.side_nav import side_nav
 from loader.config_loader import config
 from loader.css_loader import load_css
@@ -38,7 +38,8 @@ def init_session_var():
     st.session_state.selected_row = None
   if "active_records" not in st.session_state:
     st.session_state.active_records = True
-    
+
+@st.cache_data()
 def load_task_types():
     with get_db() as db:
         return BhTaskType.where(db, ["id","task_type","desc"], **{"active":True})
@@ -231,17 +232,25 @@ def main():
         # Format Created By
         users = pd.read_sql("SELECT id, full_name FROM users", engine)
         user_map = dict(zip(users['id'], users['full_name']))
-        user_map
-        # task_types
         df['created_by'] = df['created_by'].map(user_map).fillna("System").replace("", "System")
+        
+        if "task_type_id" in df:
+            task_types = { item['id']: f"{item['task_type']} - {item['desc']}" for item in load_task_types() }
+            df['task_type'] = df['task_type_id'].map(task_types)
 
         if not df.empty:
             # Configure tablez
             gb = GridOptionsBuilder.from_dataframe(df)
             gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=10)
-            gb.configure_default_column(editable=False, filterable=True, sortable=True, resizable=True)
+            gb.configure_default_column(editable=False, filterable=True, sortable=True, resizable=True, width=200)
             gb.configure_grid_options(domLayout='normal')
-            gb.configure_column(field="active", header_name="Active")
+            
+            columns_to_hide = ["id", "active", "config"]
+            for column in columns_to_hide:
+                if column in df:
+                    gb.configure_column(field=column, hide=True)
+
+            gb.configure_column(field="created_by", header_name="Created by")
             gb.configure_column(field="created_by", header_name="Created by")
             gb.configure_column(field="created_at", header_name="Created at", valueFormatter="new Date(data.created_at).toLocaleString()")
             gb.configure_column(field="updated_at", header_name="Updated at", valueFormatter="new Date(data.updated_at).toLocaleString()")
@@ -254,6 +263,7 @@ def main():
                 update_mode=GridUpdateMode.SELECTION_CHANGED,
                 theme='streamlit',
                 enable_enterprise_modules=True,
+                sidebar=True
             )
             # Handle row selection for editing
             selected_rows = grid_response.get("selected_rows", [])
@@ -277,7 +287,7 @@ def main():
             if st.session_state.selected_row:                
                 col1, col2, _ = st.columns([2,2, 6], vertical_alignment="center")
                 with col1:
-                    if st.button("Edit Record", icon=":material/edit:"):
+                    if st.session_state.active_records and st.button("Edit Record", icon=":material/edit:"):
                         st.session_state.edit_record = st.session_state.selected_row
                 with col2:
                     if st.button("Delete Record", icon=":material/delete:"):
