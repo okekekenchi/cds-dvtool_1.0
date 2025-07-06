@@ -60,3 +60,15 @@ iframe {
 .st-emotion-cache-bfgnao > p {
     font-weight: bold;
 }
+
+button[aria-label="Close"] {
+    display: none !important;
+}
+
+button p {
+    font-size: 15px !important;
+    text-overflow: ellipsis;
+    width: 95px;
+    overflow: hidden;
+    white-space: nowrap;
+}

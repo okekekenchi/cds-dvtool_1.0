@@ -3,7 +3,7 @@ from utils import authenticated, get_model_class, get_user_by_id
 from components.side_nav import side_nav
 from loader.config_loader import config
 from loader.css_loader import load_css
-from util.datatable import update_record, get_table_columns, get_table_names, get_table_data, delete_record, initialize_session
+from util.datatable import update_record, get_table_columns, get_table_names, get_table_data, delete_record
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 import pandas as pd
 from models.bh_task_type import BhTaskType
@@ -20,11 +20,24 @@ required_fields = ["task_type_id","meas_base","mb_desc"]
 
 st.markdown("""
         <style>
-        button[aria-label="Close"] {
-            display: none !important;
-        }
         </style>
     """, unsafe_allow_html=True)
+
+  
+        
+def init_session_var():
+  if "selected_table" not in st.session_state:
+    st.session_state.selected_table = None
+  if "edit_record" not in st.session_state:
+    st.session_state.edit_record = None
+  if "new_record" not in st.session_state:
+    st.session_state.new_record = False
+  if "search_query" not in st.session_state:
+    st.session_state.search_query = None
+  if "selected_row" not in st.session_state:
+    st.session_state.selected_row = None
+  if "active_records" not in st.session_state:
+    st.session_state.active_records = True
 
 def field_name(field: str):
     f_name =  f"{field} *" if field in required_fields else field
@@ -34,27 +47,43 @@ def model():
     table_class = st.session_state.selected_table[:-1]
     return get_model_class(table_class)
 
-def form_action(form_data):
+def form_action(form_data, action: str):
     col1, col2 = st.columns([0.5,0.5])
     saved = False
     with col1:
-        if st.form_submit_button("Create Record"):
-            try: 
+        if st.form_submit_button(f"{action.capitalize()} Record"):
+            try:
                 with get_db() as db:
-                    _, saved = model().first_or_create(db, **form_data)
+                    if action.lower() == "create":
+                        _, saved = model().first_or_create(db, **form_data)
+                    elif action.lower() == "update":
+                        update_record(st.session_state.selected_table, form_data["id"], form_data)
+                        saved = True
+                    else:
+                        st.error(f"Invalid action: {action}")
             except Exception as e:
-                st.error(f"Error creating record: {e}")
+                st.error(f"Error saving record: {e}")
     with col2:
         if st.form_submit_button("Cancel"):
             st.session_state.new_record = False
             st.rerun()
             
     if saved:
-        st.success("Record created successfully!")
+        st.success(f"Record {action.lower()}d successfully!")
         st.session_state.new_record = False
+        st.session_state.edit_record = None
+        st.session_state.selected_row = None
         time.sleep(2)
         st.rerun()
         
+@st.dialog("Info")
+def alert(msg):                
+    st.warning(msg)
+    
+    col1 = st.columns(1)
+    with col1:
+        if st.button("Cancel", key="cancel_delete"):
+            st.rerun()
 
 @st.dialog("Delete Record")
 def delete_form():
@@ -81,67 +110,60 @@ def delete_form():
         st.session_state.selected_row = None
         time.sleep(2)
         st.rerun()
-                            
+        
+def form_fields(data):
+    for col in get_table_columns(st.session_state.selected_table):
+        if col != "id" and col not in system_fields:
+            current_value = st.session_state.edit_record.get(col) if "id" in data else None
+            
+            if col in bool_fields:
+                data[col] = st.checkbox(field_name(col), value=current_value or True)
+            elif col == "task_type_id":
+                with get_db() as db:
+                    task_types = BhTaskType.where(db, ["id","task_type","desc"], **{"active":True})
+                    options = { item['id']: f"{item['task_type']} - {item['desc']}" for item in task_types }
+                    data[col] = st.selectbox("Select a task type",
+                                             options=options.keys(),
+                                             index=list(options.keys()).index(current_value) or 0,
+                                             format_func=lambda x: options[x])
+            else:
+                data[col] = st.text_input(field_name(col), value=current_value)
+    return data
+
 @st.dialog("Edit Record")
 def edit_form():
-    return
-    with st.form(key="edit_form"):
-        record_id = st.session_state.edit_record.get("id")
-        if not record_id:
-            st.error("No ID column found in this table. Editing requires an 'id' column.")
-        else:
-            form_data = {}
-            columns = get_table_columns(st.session_state.selected_table)
-            
-            for col in columns:
-                if col != "id":  # Skip ID field
-                    current_value = st.session_state.edit_record.get(col)
-                    if pd.isna(current_value):
-                        current_value = None
-                    form_data[col] = st.text_input(col, value=current_value)
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.form_submit_button("Save Changes"):
-                    try:
-                        update_record(st.session_state.selected_table, record_id, form_data)
-                        st.success("Record updated successfully!")
-                        st.session_state.edit_record = None
-                        st.session_state.selected_row = None
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error updating record: {e}")
-            with col2:
-                if st.form_submit_button("Cancel"):
-                    st.session_state.edit_record = None
-                    st.rerun()
+    record_id = st.session_state.edit_record.get("id")
+    st.session_state.edit_record.get("created_by")
+    
+    if st.session_state.edit_record.get("created_by") == "System":
+        st.warning("This is a **system records** - you cannot edit.")
+        return
+    elif not record_id:
+        st.warning("No ID column found in this table. Editing requires an 'id' column.")
+        return
+    else:
+        with st.form(key="edit_form"):
+            init_form_data = { "id": st.session_state.edit_record.get("id") }
+            form_data = form_fields(init_form_data)
+            form_action(form_data, "Update")
 
 @st.dialog("Create Record")
 def create_form():
     if st.session_state.selected_row:
+        st.warning("You have a record selected for update - unselect to create new records.")
         return
     
     with st.form(key="create_form"):
-        form_data = { "created_by": st.session_state.user_id}
-        for col in get_table_columns(st.session_state.selected_table):
-            if col != "id" and col not in system_fields:
-                if col in bool_fields:
-                    form_data[col] = st.checkbox(field_name(col), value=True)
-                elif col == "task_type_id":
-                    with get_db() as db:
-                        task_types = BhTaskType.where(db, ["id","task_type","desc"], **{"active":True})
-                        options = {item['id']: f"{item['task_type']} - {item['desc']}" for item in task_types}
-                        form_data[col] = st.selectbox("Select a task type", options.keys(), format_func=lambda x: options[x])
-                else:
-                    form_data[col] = st.text_input(field_name(col), value=None)
-        form_action(form_data)
+        init_form_data = { "created_by": st.session_state.user_id}
+        form_data = form_fields(init_form_data)
+        form_action(form_data, 'Create')
 
 @authenticated
 def main():
     st.session_state.current_page = "pages/8_masters.py"
     side_nav()
     st.title("Master Records")
-    initialize_session()
+    init_session_var()
     
     col1, col2, col3, col4 = st.columns([0.35, 0.3, 0.15, 0.2])
     with col1:
@@ -218,7 +240,7 @@ def main():
             gb.configure_column(field="active", header_name="Active")
             gb.configure_column(field="created_by", header_name="Created by")
             gb.configure_column(field="created_at", header_name="Created at", valueFormatter="new Date(data.created_at).toLocaleString()")
-            gb.configure_column(field="updated_at", header_name="Updated by", valueFormatter="new Date(data.updated_at).toLocaleString()")
+            gb.configure_column(field="updated_at", header_name="Updated at", valueFormatter="new Date(data.updated_at).toLocaleString()")
             gb.configure_selection(selection_mode='single', use_checkbox=True)
                         
             # Display the grid

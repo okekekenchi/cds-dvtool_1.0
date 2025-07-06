@@ -127,18 +127,5 @@ def create_record(table_name: str, data: Dict[str, Any]) -> None:
             text(f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"),
             data
         )
-        conn.commit()    
+        conn.commit()
         
-def initialize_session():
-  if "selected_table" not in st.session_state:
-    st.session_state.selected_table = None
-  if "edit_record" not in st.session_state:
-    st.session_state.edit_record = None
-  if "new_record" not in st.session_state:
-    st.session_state.new_record = False
-  if "search_query" not in st.session_state:
-    st.session_state.search_query = None
-  if "selected_row" not in st.session_state:
-    st.session_state.selected_row = None
-  if "active_records" not in st.session_state:
-    st.session_state.active_records = True
