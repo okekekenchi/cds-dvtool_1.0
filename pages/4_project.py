@@ -302,6 +302,9 @@ def get_selected_sheets() -> dict:
     selected_sheet_names = st.session_state.validation['sheets']
     return { name: all_sheets.get(name) for name in selected_sheet_names }
 
+def add_prefix_to_columns(df: pd.DataFrame, prefix: str) -> pd.DataFrame:
+    return df.rename(columns={col: f"{prefix}.{col}" for col in df.columns})
+
 def perform_joins(joins) -> pd.DataFrame:
     """
     Performs a sequence of Pandas DataFrame joins based on a list of join specifications.
@@ -333,7 +336,13 @@ def perform_joins(joins) -> pd.DataFrame:
             
             if left_on and right_on:
                 try:
-                    result = pd.merge(left_df, right_df, how=how, right_on=right_on, left_on=left_on)
+                    result = pd.merge(left_df,
+                                    right_df[[right_on[0], right_on[1]]].drop_duplicates(),
+                                    left_on=left_on,
+                                    right_on=right_on,
+                                    how=how,
+                                    indicator=True
+                                    ).query('_merge == "left_only"').drop('_merge', axis=1)
                 except Exception as e:
                     st.error(f"An error occurred during join {i+1} ('{join['left_table']}' {how} '{join["right_table"]}'): {e}")
                     return None
@@ -349,8 +358,9 @@ def view_output():
     
     if selected_sheets:
         joins = st.session_state.validation['joins']
-        result = perform_joins(joins) if joins else next(iter(selected_sheets.values())) # returns the first item if no join exists
-        result
+        merged_df = perform_joins(joins) if joins else next(iter(selected_sheets.values())) # returns the first item if no join exists
+        merged_df
+        # result = merged_df[merged_df['lsaconxb_xf'].isna()]
 
         # if result:
         # else:
