@@ -360,11 +360,7 @@ def view_output():
         joins = st.session_state.validation['joins']
         merged_df = perform_joins(joins) if joins else next(iter(selected_sheets.values())) # returns the first item if no join exists
         merged_df
-        # result = merged_df[merged_df['lsaconxb_xf'].isna()]
-
-        # if result:
-        # else:
-        #     st.success('Records passed all validation checks')
+        
     else:
         st.info("No sheets seleted.")
 

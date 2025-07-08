@@ -1,0 +1,56 @@
+/* Main styling */
+.stApp {
+    background-color: white;
+    font-family: 'Arial', sans-serif;
+}
+
+/* Form styling */
+.stTextInput>div>div>input, 
+.stPassword>div>div>input {
+    border-radius: 5px;
+    padding: 10px;
+    border: 1px solid #ddd;
+}
+
+/* Link styling */
+a {
+    color: #e83757;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Error message styling */
+.error-message {
+    color: #f44336;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+/* Button styling */
+.stButton>button {
+    background-color: #e83757;
+    color: white !important;
+    border: none !important;
+    border-radius: 5px;
+    /* padding: 10px 24px !important; */
+}
+
+.stButton>button:hover {
+    background-color: #d12b4a;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.stButton>button:active {
+    transform: translateY(0);
+}
+
+/* Input field styling */
+.stTextInput>div>div>input, 
+.stPassword>div>div>input {
+    border-radius: 5px !important;
+    padding: 10px !important;
+}
