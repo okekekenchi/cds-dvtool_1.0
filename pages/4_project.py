@@ -19,8 +19,22 @@ st.markdown("""
                 width: -webkit-fill-available !important;
             }
             
+            div[data-testid="stExpanderDetails"] {
+                min-height: 200px;
+            }
+            
         </style>
     """, unsafe_allow_html=True)
+
+join_types = {
+    "left":"Left Join",
+    "a_left":"Left Anti-Join",
+    "right":"Right Join",
+    "a_right":"Right Anti-Join",
+    "inner":"Inner Join",
+    "a_inner":"Inner Anti-Join",
+    "outer":"Outer Join"
+}
 
 def init_session_var():
     if 'project' not in st.session_state:
@@ -38,6 +52,7 @@ def init_session_var():
             'sheets': [],
             'joins': []
         }
+    
 
 # Cache functions with hash-based invalidation
 @st.cache_resource
@@ -120,21 +135,22 @@ def select_sheets():
         None - updates session state directly
     """
     col1, col2, _ = st.columns([0.5,0.2,0.3])
+    sheet_options = list(st.session_state.project['sheets'].keys())
+    selected_options = st.session_state.validation['sheets']
     
     with col1:
-        new_sheet = st.selectbox(
+        new_sheets = st.multiselect(
                         "Select sheets/tables to validate",
-                        options=list(st.session_state.project['sheets'].keys()),
-                        index=None,
+                        options=[ option for option in sheet_options if option not in selected_options ],
+                        default=None,
                         help="Select which sheets you want to include in validation"
-                    )
+                     )
     with col2:
-        if st.button("Add", key="add_sheets", icon=":material/add:") and new_sheet:
-            if new_sheet not in st.session_state.validation['sheets']:
-                st.session_state.validation['sheets'].append(new_sheet)
-                st.rerun()
-            else:
-                alert("sheet has already been added")
+        if st.button("Add", key="add_sheets", icon=":material/add:") and new_sheets:
+            for sheet in new_sheets:
+                if sheet not in st.session_state.validation['sheets']:
+                    st.session_state.validation['sheets'].append(sheet)
+            st.rerun()
     
     if not st.session_state.validation['sheets']:
         st.write("Your sheet list is empty!")
@@ -147,7 +163,7 @@ def select_sheets():
                 st.write(f"{i+1}. {sheet}")
             with col2:
                 if st.button(f"View", key=f"preview_sheet_{i}", icon=":material/visibility:"):
-                    preview_sheet(st.session_state.project['sheets'][new_sheet])
+                    preview_sheet(st.session_state.project['sheets'][sheet])
             with col3:
                 if st.button(f"Delete", key=f"delete_sheet_{i}", icon=":material/delete:"):
                     del st.session_state.validation['sheets'][i]
@@ -181,11 +197,11 @@ def join_sheets():
     with col2:
         new_join['join_type'] = st.selectbox(
                                     "Join Type",
-                                    options=["inner", "left", "right", "outer"],
-                                    index=0,
-                                    help="Select which join type to implement"
+                                    options=join_types.keys(),
+                                    index=1,
+                                    help="Select which join type to implement",
+                                    format_func=lambda x: join_types[x]
                                 )
-        
     with col3:
         new_join['right_table'] = st.selectbox(
                                         "Right Table",
@@ -222,12 +238,15 @@ def join_sheets():
                 df = pd.DataFrame([join])
                 if 'on_cols' in df:
                     df = df.drop(columns=["on_cols"])  # Remove column
-                st.table(df)
                 
+                df['join_type'] = df['join_type'].map(join_types)
+                df.columns = [ f"**{column.replace('_', " ").capitalize()}**" for column in df.columns]
+                st.table(df)
+            
             with col2:
                 if st.button("Conditions", key=f"join_conditions_{idx}"):
-                    if new_join['left_table'] and new_join['right_table'] and new_join['join_type']:
-                        join_conditions(idx, new_join)
+                    if join['left_table'] and join['right_table'] and join['join_type']:
+                        join_conditions(idx, join)
                     else:
                         alert("Fill all required fields")
                 
@@ -241,8 +260,28 @@ def table_columns(table_name: str):
 @st.dialog("Join Conditions", width='large')
 def join_conditions(idx, join):
     """multi-column join"""
-    st.write(f"Left table: **{join['left_table']}** | Join type: **{join['join_type']}** | Right table: **{join['right_table']}**")
+    col1, col2, col3, _ = st.columns([0.15, 0.3, 0.3, 0.25])
     
+    with col1:
+        st.write('', '', '')
+        st.write('', '', '')
+        f"Left table: **{join['left_table']}**"
+    with col2:
+        join_type = st.selectbox(label='',
+                        placeholder="Join Type",
+                        options=join_types.keys(),
+                        index=list(join_types.keys()).index(join['join_type']),
+                        help="Select which join type to implement",
+                        format_func=lambda x: join_types[x],
+                        key="join_type_condition"
+                    )
+    with col3:
+        st.write('', '', '')
+        st.write('', '', '')
+        f"Right table: **{join['right_table']}**"
+        
+    st.session_state.validation['joins'][idx]['join_type'] = join_type
+                
     col1, col2, col3 = st.columns([0.3, 0.3, 0.16])
     
     if 'on_cols' not in st.session_state.validation['joins'][idx]:
@@ -272,7 +311,7 @@ def join_conditions(idx, join):
                 if on_col not in st.session_state.validation['joins'][idx]['on_cols']:
                     st.session_state.validation['joins'][idx]['on_cols'].append(on_col)
                 else:
-                    st.warning("Columns has already been joined")
+                    st.warning("Columns have already been joined")
             else:
                 st.warning('Fill all required fields.')
     
@@ -283,7 +322,13 @@ def join_conditions(idx, join):
             st.divider()
             col1, col2 = st.columns([0.8, 0.2])
             with col1:
-                st.write(f"**{join['left_table']}.**  {on_col['left_column']} = **{join['right_table']}.**  {on_col['right_column']}")
+                col4, col5, col6 = st.columns([0.4,0.2,0.3])
+                with col4:
+                    st.write(f"**{join['left_table']} . {on_col['left_column']}**")
+                with col5:
+                    st.write("**=**")
+                with col6:
+                    st.write(f"**{join['right_table']} . {on_col['right_column']}**")
             with col2:
                 if st.button(f"Delete", key=f"delete_join_condition_{i}", icon=":material/delete:"):
                     del st.session_state.validation['joins'][idx]['on_cols'][i]
@@ -330,6 +375,7 @@ def perform_joins(joins) -> pd.DataFrame:
             left_df = result if result is not None and join['left_table'] == result.name else selected_sheets[join["left_table"]]
             right_df = selected_sheets[join["right_table"]]
             how = join["join_type"]
+            is_anti_join = join["join_type"][:2] == "a_"
             
             left_on = [ col["left_column"] for col in join["on_cols"] ]
             right_on = [ col["right_column"] for col in join["on_cols"] ]
@@ -340,9 +386,13 @@ def perform_joins(joins) -> pd.DataFrame:
                                     right_df[[right_on[0], right_on[1]]].drop_duplicates(),
                                     left_on=left_on,
                                     right_on=right_on,
-                                    how=how,
-                                    indicator=True
-                                    ).query('_merge == "left_only"').drop('_merge', axis=1)
+                                    how=(join["join_type"]).replace("a_", ""),
+                                    indicator=is_anti_join
+                                    )
+                    
+                    if is_anti_join:
+                        result = result.query('_merge == "left_only"').drop('_merge', axis=1)
+                        
                 except Exception as e:
                     st.error(f"An error occurred during join {i+1} ('{join['left_table']}' {how} '{join["right_table"]}'): {e}")
                     return None
