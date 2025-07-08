@@ -1,5 +1,5 @@
 import streamlit as st
-from utils import authenticated, get_model_class
+from utils import authenticated, get_model_class, alert
 from components.side_nav import side_nav
 from loader.config_loader import config
 from loader.css_loader import load_css
@@ -10,7 +10,7 @@ from models.bh_task_type import BhTaskType
 import time
 from database.database import get_db, engine
 
-st.set_page_config(page_title="Masters", page_icon=":settings:", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Masters", page_icon=":material/settings:", layout="wide", initial_sidebar_state="expanded")
 load_css('assets/css/masters.css')
 
 system_tables = ["users","sessions"]
@@ -23,8 +23,6 @@ st.markdown("""
         </style>
     """, unsafe_allow_html=True)
 
-  
-        
 def init_session_var():
   if "selected_table" not in st.session_state:
     st.session_state.selected_table = None
@@ -39,7 +37,7 @@ def init_session_var():
   if "active_records" not in st.session_state:
     st.session_state.active_records = True
 
-@st.cache_data()
+
 def load_task_types():
     with get_db() as db:
         return BhTaskType.where(db, ["id","task_type","desc"], **{"active":True})
@@ -80,19 +78,14 @@ def form_action(form_data, action: str):
         st.session_state.selected_row = None
         time.sleep(2)
         st.rerun()
-        
-@st.dialog("Info")
-def alert(msg):                
-    st.warning(msg)
-    
-    col1 = st.columns(1)
-    with col1:
-        if st.button("Cancel", key="cancel_delete"):
-            st.rerun()
 
 @st.dialog("Delete Record")
 def delete_form():
     record_id = st.session_state.selected_row.get("id")
+    
+    if st.session_state.selected_row.get("created_by") == "System":
+        st.warning("This is a **system record** - you cannot delete.")
+        return
                 
     st.warning(f"Are you sure you want to delete this record: {record_id}?")
     
@@ -136,10 +129,9 @@ def form_fields(data):
 @st.dialog("Edit Record")
 def edit_form():
     record_id = st.session_state.edit_record.get("id")
-    st.session_state.edit_record.get("created_by")
     
     if st.session_state.edit_record.get("created_by") == "System":
-        st.warning("This is a **system records** - you cannot edit.")
+        st.warning("This is a **system record** - you cannot edit.")
         return
     elif not record_id:
         st.warning("No ID column found in this table. Editing requires an 'id' column.")
@@ -237,12 +229,15 @@ def main():
         if "task_type_id" in df:
             task_types = { item['id']: f"{item['task_type']} - {item['desc']}" for item in load_task_types() }
             df['task_type'] = df['task_type_id'].map(task_types)
+            cols = df.columns.tolist()
+            cols = [cols[-1]] + cols[:-1] # Reorder columns: last column first, followed by the rest
+            df = df[cols] # Reassign the DataFrame with the new column order
 
         if not df.empty:
             # Configure tablez
             gb = GridOptionsBuilder.from_dataframe(df)
             gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=10)
-            gb.configure_default_column(editable=False, filterable=True, sortable=True, resizable=True, width=200)
+            gb.configure_default_column(editable=False, filterable=False, sortable=True, resizable=True, width=250)
             gb.configure_grid_options(domLayout='normal')
             
             columns_to_hide = ["id", "active", "config"]
@@ -250,6 +245,9 @@ def main():
                 if column in df:
                     gb.configure_column(field=column, hide=True)
 
+            if "task_type_id" in df:
+                gb.configure_column(field="task_type_id", hide=True)
+                
             gb.configure_column(field="created_by", header_name="Created by")
             gb.configure_column(field="created_by", header_name="Created by")
             gb.configure_column(field="created_at", header_name="Created at", valueFormatter="new Date(data.created_at).toLocaleString()")

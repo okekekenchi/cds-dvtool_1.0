@@ -197,3 +197,7 @@ def get_model_class(model_name) -> BaseModel:
     # Assumes class name matches module name in CamelCase
     class_name = ''.join([part.capitalize() for part in model_name.split('_')])
     return getattr(module, class_name)
+        
+@st.dialog("Info")
+def alert(msg):
+    st.warning(msg)
