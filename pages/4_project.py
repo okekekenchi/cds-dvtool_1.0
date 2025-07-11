@@ -425,7 +425,7 @@ def perform_joins(joins) -> pd.DataFrame:
                         result = result.query('_merge == "left_only"').drop('_merge', axis=1)
                         
                 except Exception as e:
-                    st.error(f"An error occurred during join {i+1} ('{join['left_table']}' {how} '{join["right_table"]}'): {e}")
+                    st.error(f"An error occurred during join {i+1} ('{join['left_table']}' {how} '{join['right_table']}'): {e}")
                     return None
             else:
                 return None
