@@ -5,10 +5,10 @@ from loader.config_loader import config
 from loader.css_loader import load_css
 import pandas as pd
 import os
-from io import BytesIO
+from io import BytesIO, StringIO
 from pathlib import Path
 import hashlib
-
+import numpy as np
 
 st.set_page_config(page_title="Project", page_icon=":material/folder:", layout="wide", initial_sidebar_state="expanded")
 load_css('assets/css/project.css')
@@ -36,13 +36,29 @@ join_types = {
     "outer":"Outer Join"
 }
 
+operators = {
+    'equals':'Equals',
+    'not_equals':'Not Equals',
+    'greater_than':'Greater than',
+    'less_than': 'Less than',
+    'greater_than_equal': 'Greater than equal',
+    'less_than_equal': 'Less than equal',
+    'between': 'Between',
+    'contains': 'Contains',
+    'not_contains': 'Does not contains',
+    'starts_with': 'Starts with',
+    'ends_with': 'Ends with',
+    'is_null': 'Is null',
+    'not_null': 'Not null',
+    'in_list': 'In list'
+}
+
 def init_session_var():
     if 'project' not in st.session_state:
         st.session_state.project = {
             'project_name': None,
             'workbook': None,
             'sheets': {},
-            'project_name': '',
             'workbook_hash': None,
             'joined_sheets': [],
         }
@@ -50,8 +66,14 @@ def init_session_var():
     if 'validation' not in st.session_state:
         st.session_state.validation = {
             'sheets': [],
-            'joins': []
+            'joins': [],
+            'conditions': []
         }
+    
+    if 'joined_df' not in st.session_state:
+        st.session_state.joined_df = pd.DataFrame()
+    if 'joined_columns' not in st.session_state:
+        st.session_state.joined_columns = []
     
 
 # Cache functions with hash-based invalidation
@@ -66,9 +88,15 @@ def load_workbook(file_path: BytesIO, file_hash: str) -> pd.ExcelFile:
 
 @st.cache_data
 def load_sheet(_excel_file, sheet_name):
-    """Load individual sheet from cached workbook"""
-    try:
-        return pd.read_excel(_excel_file, sheet_name=sheet_name)
+    """
+    Load individual sheet from cached workbook
+    Elimimate columnms with whitespace/empty headers
+    """
+    try:    
+        df = pd.read_excel(_excel_file, sheet_name=sheet_name)
+        columns_to_drop = df.columns[df.columns.str.strip() == '']
+
+        return df if columns_to_drop.empty else df.drop(columns=columns_to_drop)
     except Exception as e:
         st.error(f"Error loading sheet '{sheet_name}': {str(e)}")
         return pd.DataFrame()
@@ -134,13 +162,13 @@ def select_sheets():
     Returns:
         None - updates session state directly
     """
-    col1, col2, _ = st.columns([0.5,0.2,0.3])
+    col1, col2, col3, _ = st.columns([0.5,0.2,0.05, 0.25])
     sheet_options = list(st.session_state.project['sheets'].keys())
     selected_options = st.session_state.validation['sheets']
     
     with col1:
         new_sheets = st.multiselect(
-                        "Select sheets/tables to validate",
+                        "Select sheets/tables to validate *",
                         options=[ option for option in sheet_options if option not in selected_options ],
                         default=None,
                         help="Select which sheets you want to include in validation"
@@ -151,7 +179,10 @@ def select_sheets():
                 if sheet not in st.session_state.validation['sheets']:
                     st.session_state.validation['sheets'].append(sheet)
             st.rerun()
-    
+    with col3:
+        st.button("", on_click=clear_sheets, key="clear_sheets",
+                  icon=":material/refresh:", help="Clear all sheets")
+             
     if not st.session_state.validation['sheets']:
         st.write("Your sheet list is empty!")
     else:
@@ -171,7 +202,7 @@ def select_sheets():
         
 @st.dialog('Preview Table', width="large")
 def preview_sheet(df):
-    st.dataframe(df)
+    st.dataframe(df.head())
     
 def join_sheets():
     """Renders UI for selecting and joining sheets for validation.
@@ -189,14 +220,14 @@ def join_sheets():
     
     with col1:
         new_join['left_table'] = st.selectbox(
-                                    "Left Table",
+                                    "Left Table *",
                                     options=st.session_state.validation['sheets'],
                                     index=None,
                                     help="Select which sheets you want to include in validation"
                                 )
     with col2:
         new_join['join_type'] = st.selectbox(
-                                    "Join Type",
+                                    "Join Type *",
                                     options=join_types.keys(),
                                     index=1,
                                     help="Select which join type to implement",
@@ -204,7 +235,7 @@ def join_sheets():
                                 )
     with col3:
         new_join['right_table'] = st.selectbox(
-                                        "Right Table",
+                                        "Right Table *",
                                         options=st.session_state.validation['sheets'],
                                         index=None,
                                         help="Select which sheets you want to include in validation"
@@ -240,7 +271,7 @@ def join_sheets():
                     df = df.drop(columns=["on_cols"])  # Remove column
                 
                 df['join_type'] = df['join_type'].map(join_types)
-                df.columns = [ f"**{column.replace('_', " ").capitalize()}**" for column in df.columns]
+                df.columns = [ f"**{column.replace('_', ' ').capitalize()}**" for column in df.columns]
                 st.table(df)
             
             with col2:
@@ -254,7 +285,7 @@ def join_sheets():
                     del st.session_state.validation['joins'][idx]
                     st.rerun()
 
-def table_columns(table_name: str):
+def get_table_columns(table_name: str):
     return list(st.session_state.project['sheets'][table_name].columns)
 
 @st.dialog("Join Conditions", width='large')
@@ -292,14 +323,14 @@ def join_conditions(idx, join):
     with col1:
         on_col['left_column'] = st.selectbox(
                                     "Left Column",
-                                    options=table_columns(join['left_table']),
+                                    options=get_table_columns(join['left_table']),
                                     index=None,
                                     help="Select which sheets you want to include in validation"
                                 )
     with col2:
         on_col['right_column'] = st.selectbox(
                                     "Right Column",
-                                    options=table_columns(join['right_table']),
+                                    options=get_table_columns(join['right_table']),
                                     index=None,
                                     help="Select the column you want to join."
                                 )
@@ -336,10 +367,10 @@ def join_conditions(idx, join):
     _, col1, col2 = st.columns([0.6,0.2,0.2])
     with col1:
         if st.session_state.validation['joins'][idx]['on_cols']:
-            if st.button("Save"):
+            if st.button("Save", key="save_join_condition", icon=":material/save:"):
                 st.rerun()
     with col2:
-        if st.button("Cancel"):
+        if st.button("Cancel", icon=":material/close:"):
             st.rerun()
             
 def get_selected_sheets() -> dict:
@@ -404,21 +435,186 @@ def perform_joins(joins) -> pd.DataFrame:
 
 def view_output():
     selected_sheets = get_selected_sheets()
-    result = None
+    joins = st.session_state.validation['joins']
+    first_sheet= next(iter(selected_sheets.values()))
+    joined_df = perform_joins(joins) if joins else first_sheet
+    st.session_state.joined_columns = joined_df.columns if not joined_df.empty else []
     
-    if selected_sheets:
-        joins = st.session_state.validation['joins']
-        merged_df = perform_joins(joins) if joins else next(iter(selected_sheets.values())) # returns the first item if no join exists
-        merged_df
-        
-    else:
-        st.info("No sheets seleted.")
+    if st.session_state.validation['conditions'] and not joined_df.empty:
+        joined_df = apply_query_conditions(joined_df, st.session_state.validation['conditions'])
+    
+    st.session_state.joined_df = joined_df
+    st.session_state.joined_df
+   
+def apply_query_conditions(df, conditions):
+    """Apply query conditions to dataframe"""
+    if not conditions:
+        return df
+    
+    try:
+        query_str = " & ".join([build_condition(df, cond) for cond in conditions])
+        return df.query(query_str)
+    except Exception as e:
+        st.error(f"Query failed: {str(e)}")
+        return df
 
+def build_condition(df, condition):
+    """Build a pandas query condition from the condition dictionary"""
+    column = condition['column']
+    operator = condition['operator']
+    value = condition['value_1']
+    value2 = condition.get('value_2', None)
+    
+    # Handle different data types
+    if pd.api.types.is_numeric_dtype(df[column]):
+        value = float(value) if value not in ['', None] else None
+        if value2:
+            value2 = float(value2)
+    elif pd.api.types.is_datetime64_any_dtype(df[column]):
+        value = f"'{value}'"
+        if value2:
+            value2 = f"'{value2}'"
+    else:
+        value = f"'{value}'" if value not in ['', None] else None
+        if value2:
+            value2 = f"'{value2}'"
+    
+    # Build condition based on operator
+    if operator == 'equals':
+        return f"`{column}` == {value}"
+    elif operator == 'not_equals':
+        return f"`{column}` != {value}"
+    elif operator == 'greater_than':
+        return f"`{column}` > {value}"
+    elif operator == 'less_than':
+        return f"`{column}` < {value}"
+    elif operator == 'greater_than_equal':
+        return f"`{column}` >= {value}"
+    elif operator == 'less_than_equal':
+        return f"`{column}` <= {value}"
+    elif operator == 'between':
+        return f"`{column}` >= {value} & `{column}` <= {value2}"
+    elif operator == 'contains':
+        return f"`{column}`.str.contains({value}, case=False, na=False)"
+    elif operator == 'not_contains':
+        return f"~`{column}`.str.contains({value}, case=False, na=False)"
+    elif operator == 'starts_with':
+        return f"`{column}`.str.startswith({value}, na=False)"
+    elif operator == 'ends_with':
+        return f"`{column}`.str.endswith({value}, na=False)"
+    elif operator == 'is_null':
+        return f"`{column}`.isna()"
+    elif operator == 'not_null':
+        return f"`{column}`.notna()"
+    elif operator == 'in_list':
+        values = [x.strip() for x in value.split(',')]
+        if pd.api.types.is_numeric_dtype(df[column]):
+            values = [float(x) for x in values]
+            return f"`{column}` in {values}"
+        else:
+            return f"`{column}` in {[str(x) for x in values]}"
+    else:
+        return ""
+    
+def add_query_condition(param):
+    """Add a new condition to the list"""
+    st.session_state.validation['conditions'].append({
+        'column': param['column'],
+        'operator': param['operator'],
+        'value_1': param['value_1'],
+        'value_2': param['value_2'],
+        'logical': param['logical']
+    })
+
+def remove_condition(index):
+    """Remove a condition from the list"""
+    st.session_state.validation['conditions'].pop(index)
+
+def clear_conditions():
+    """Reset all conditions"""
+    st.session_state.validation['conditions'] = []
+
+def clear_sheets():
+    """Reset all sheets"""
+    st.session_state.validation['sheets'] = []
+
+def query_builder():
+    col1, col2, col3, col4 = st.columns([3, 3, 3, 3]) # Add new query condition
+    new = {}
+    
+    with col1:        
+        
+        new['column'] = st.selectbox("Column *", key="new_column",
+                                     options=st.session_state.joined_columns)
+        
+    with col2:
+        new['operator'] = st.selectbox("Operator *",
+                                        options=operators.keys(),
+                                        key="new_operator",
+                                        format_func=lambda x: operators[x])
+    with col3:
+        new['value_2'] = None
+        value_is_required = True
+        if new['operator'] in ['is_null', 'not_null']:
+            new['value_1'] = None
+            value_is_required = False 
+        elif new['operator'] == 'in_list':
+            new['value_1'] = st.text_input("Comma-separated values *", key="new_value_1")
+        elif new['operator'] == 'between':
+            new['value_1'] = st.text_input("From value *", key="new_value_2")
+            new['value_2'] = st.text_input("To value *", key="new_value2_3")
+        elif new['operator'] in ['contains', 'not_contains']:
+            new['value_1'] = st.text_input("Value *", "", key="new_value_4")
+            new['value_2'] = st.text_input("Position", key="new_value2_5")
+        else:
+            new['value_1'] = st.text_input("Value *", key="new_value_6")
+            
+    with col4:
+        new['logical'] = st.selectbox("", options=['AND', 'OR'], key="new_logical")
+    
+    # Action buttons
+    _, col1, col2 = st.columns([0.7,0.2,0.05])
+    
+    with col1:
+        st.button("Add", key="add_query_condition", icon=":material/add:",
+                    on_click=add_query_condition, args=(new,))
+    with col2:
+        st.button("", on_click=clear_conditions, icon=":material/refresh:", help="Clear all conditions")
+            
+    if st.session_state.validation['conditions']:
+        col1, col2, col3, col4, _ = st.columns([0.2, 0.2, 0.2, 0.2, 0.2])
+        with col1:
+            st.write(f"**Column**")
+        with col2:
+            st.write(f"**Operator**")
+        with col3:
+            st.write(f"**Value**")
+        with col4:
+            st.write(f"**Logic**")
+        
+        for i, cond in enumerate(st.session_state.validation['conditions']):
+            col1, col2, col3, col4, col5 = st.columns([0.2, 0.2, 0.2, 0.2, 0.2])
+            with col1:
+                st.text(f"{cond['column']}")
+            with col2:
+                st.text(f"{cond['operator'].replace('_', ' ').title()}")
+            with col3:
+                if cond['operator'] in ['between', 'contains','not_contains']:
+                    st.text(f"{cond['value_1']} and {cond['value_2']}")
+                else:
+                    st.text(f"{cond['value_1']}")
+            with col4:
+                st.text(f"{cond.get('logical', 'AND')}")
+            with col5:
+                st.button("Delete", icon=":material/delete:",
+                          key=f"remove_condition_{i}", on_click=remove_condition, args=(i,))
+                
+                
 @authenticated
 def main():
+    st.title("New Project")
     st.session_state.current_page = "pages/4_project.py"
     side_nav()
-    st.title("New Project")
     init_session_var()
     
     with st.expander("📂 Project Setup", expanded=True):
@@ -441,8 +637,12 @@ def main():
             
             if uploaded_file:
                 current_hash = get_file_hash(uploaded_file)
-                
+                                
                 if st.session_state.project['workbook_hash'] != current_hash:
+                    
+                    st.session_state.clear()
+                    init_session_var()
+                    
                     try:
                         # Load directly from bytes without temp file
                         excel_file = load_workbook(uploaded_file.getvalue(), current_hash)
@@ -475,20 +675,31 @@ def main():
     
     if uploaded_file and st.session_state.project.get('sheets'):
         with st.expander("✅ Validation", expanded=True):
-            sheet_tab, join_tab, column_tab, output_tab = st.tabs(["sheets", "Joins", "Columns", "Output"], width='stretch')
-
+            tabs = ["Sheets", "Join Sheets", "Build Query", "Output"]
+            sheet_tab, join_tab, query_tab, output_tab = st.tabs(tabs, width='stretch')
+            count_selected_sheets = len(get_selected_sheets())
+            
             with sheet_tab:
                 select_sheets()
-                                
+            
             with join_tab:
-                join_sheets()
-                
-            with column_tab:
-                st.write("Column queries")
-                
+                if count_selected_sheets >= 2:
+                    join_sheets()
+                else:
+                    st.info('You need at least two or more sheets/tables to perform a join.')
+            
             with output_tab:
-                view_output()
-                            
+                if count_selected_sheets:
+                    view_output()
+                else:
+                    st.info("No sheets seleted.")
+            
+            with query_tab:
+                if count_selected_sheets:
+                    query_builder()
+                else:
+                    st.info("Select sheets/tables to begin building queries")
+                 
 
 if __name__ == "__main__":
     main()
