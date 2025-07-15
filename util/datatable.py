@@ -1,16 +1,17 @@
-from database.database import engine, get_db
+from database.database import engine
 from sqlalchemy import inspect, text
 import pandas as pd
 from typing import Optional, Dict, Any
 import streamlit as st
 from models.base import BaseModel
 from typing import List, Optional, Union
+from utils import system_tables
 
 
 def get_table_names() -> list:
     """Get list of table names in the database"""
     inspector = inspect(engine)
-    return inspector.get_table_names()
+    return [ name for name in inspector.get_table_names() if name not in system_tables]
 
 def get_table_data(
       table_name: str,

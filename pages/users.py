@@ -1,5 +1,5 @@
 import streamlit as st
-from utils import authenticated
+from util.auth_utils import authenticated
 from components.side_nav import side_nav
 from loader.config_loader import config
 from loader.css_loader import load_css

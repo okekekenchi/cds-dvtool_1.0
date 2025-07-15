@@ -1,17 +1,16 @@
 import streamlit as st
 import re
 import time
-from utils import create_user, is_password_strong, email_exists, guest, hide_nav_and_header
+from util.auth_utils import create_user, is_password_strong, email_exists, guest
 from loader.config_loader import config
 from loader.css_loader import load_css
 
 st.set_page_config(page_title="Register", page_icon="📝", layout="centered", initial_sidebar_state="collapsed")
-load_css('assets/css/register.css')
-hide_nav_and_header()
 
 @guest
 def main():
     st.session_state.current_page = config('route.home')
+    load_css('assets/css/register.css')
     st.title("Sign Up")
 
     full_name = st.text_input("Full Name", placeholder="Enter your full name")

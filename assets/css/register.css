@@ -1,6 +1,18 @@
 .stAppHeader {
     display: none !important;
 }
+section[data-testid="stSidebar"] {
+    display: none !important;
+}
+
+
+header[data-testid="stHeader"] {
+    display: none !important;
+}
+
+footer {
+    visibility: hidden;
+}
 
 section[data-testid="stSidebar"] {
     display: none !important;

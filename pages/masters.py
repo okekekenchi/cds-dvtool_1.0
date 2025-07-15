@@ -1,5 +1,6 @@
 import streamlit as st
-from utils import authenticated, get_model_class, alert
+from util.auth_utils import authenticated
+from utils import get_model_class, system_fields, bool_fields, required_fields
 from components.side_nav import side_nav
 from loader.config_loader import config
 from loader.css_loader import load_css
@@ -11,17 +12,8 @@ import time
 from database.database import get_db, engine
 
 st.set_page_config(page_title="Masters", page_icon=":material/settings:", layout="wide", initial_sidebar_state="expanded")
-load_css('assets/css/masters.css')
+load_css('assets/css/project.css')
 
-system_tables = ["users","sessions"]
-system_fields = ["created_by", "created_at", "updated_at"]
-bool_fields = ["active"]
-required_fields = ["task_type_id","meas_base","mb_desc"]
-
-st.markdown("""
-        <style>
-        </style>
-    """, unsafe_allow_html=True)
 
 def init_session_var():
   if "selected_table" not in st.session_state:
@@ -155,14 +147,14 @@ def create_form():
 
 @authenticated
 def main():
+    st.title("Master Records")
     st.session_state.current_page = "pages/8_masters.py"
     side_nav()
-    st.title("Master Records")
     init_session_var()
     
     col1, col2, col3, col4 = st.columns([0.35, 0.3, 0.15, 0.2])
     with col1:
-        table_names = [name for name in get_table_names() if name not in system_tables]
+        table_names = get_table_names()
         options = { name: config(f'master.{name[:-1]}.label') for name in table_names }
         
         selected_table = st.selectbox(
@@ -292,7 +284,7 @@ def main():
                         delete_form()
         
         with create_btn_placeholder.container():
-            if not st.session_state.selected_row:
+            if not st.session_state.selected_row and st.session_state.selected_table != "validation_checklists":
                 if st.button("New Record", key="create", icon=":material/add:") and selected_table:
                     st.session_state.new_record = True
                     st.session_state.edit_record = None

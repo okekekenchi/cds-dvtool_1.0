@@ -1,13 +1,31 @@
 import streamlit as st
-from utils import hide_nav_and_header, auth
+from util.auth_utils import auth
 from loader.config_loader import config
 from database.migration import init_db
-  
-def main():  
-  init_db()
-  hide_nav_and_header()
+
+st.markdown("""
+  <style>
+    section[data-testid="stSidebar"] {
+      display: none !important;
+    }
     
-  if auth(): # Authenticated
+    .stAppHeader {
+      display: none !important;
+    }
+
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+    footer {
+        visibility: hidden;
+    }
+  </style>
+""", unsafe_allow_html=True)
+
+def main():
+  init_db()
+    
+  if auth():
     st.switch_page(st.session_state.current_page or config('route.home'))
   else: # Guest
     st.switch_page(config('route.login'))

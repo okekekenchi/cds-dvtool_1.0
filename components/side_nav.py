@@ -1,6 +1,6 @@
 import streamlit as st
 from PIL import Image
-from utils import get_user_by_id, logout, auth
+from util.auth_utils import get_user_by_id, logout, auth
 import os
 from loader.config_loader import config
 from loader.css_loader import load_css
@@ -60,9 +60,9 @@ def side_nav():
         )
         
     path = "pages"
-    st.sidebar.page_link(f"{path}/3_home.py", label="Dashboard", icon=":material/dashboard:"),
-    st.sidebar.page_link(f"{path}/4_project.py", label="My Projects", icon=":material/folder:"),
-    st.sidebar.page_link(f"{path}/8_masters.py", label="Masters", icon=":material/settings:"),
-    st.sidebar.page_link(f"{path}/6_users.py", label="Users", icon=":material/groups:"),                
-    st.sidebar.page_link(f"{path}/7_account.py", label="My account", icon=":material/account_circle:"),
+    st.sidebar.page_link(f"{path}/home.py", label="Dashboard", icon=":material/dashboard:"),
+    st.sidebar.page_link(f"{path}/project.py", label="My Projects", icon=":material/folder:"),
+    st.sidebar.page_link(f"{path}/masters.py", label="Masters", icon=":material/settings:"),
+    st.sidebar.page_link(f"{path}/users.py", label="Users", icon=":material/groups:"),                
+    st.sidebar.page_link(f"{path}/account.py", label="My account", icon=":material/account_circle:"),
     

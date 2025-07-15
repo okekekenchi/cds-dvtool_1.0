@@ -1,15 +1,22 @@
 .stMainBlockContainer {
     padding: 0px 30px;
+    padding-bottom: 30px;
 }
 
 .stHeading {
     position: absolute;
-    z-index: 1;
-    top: -70px;
+    z-index: 1000000;
+    top: -5px;
+    left: -2px;
+}
+
+.st-emotion-cache-1nwdr1w h1 {
+    padding: 0px !important;
 }
 
 .stAppHeader {
-    display: none !important;
+    height: 20px !important;
+    min-height: 40px;
 }
 
 iframe {
@@ -26,8 +33,6 @@ iframe {
 }
 
 .stButton>button {
-    /* border: 2px solid #381338; */
-    border-radius: 20px;
     color: white;
     padding: 10px 24px;
     text-align: center;
@@ -42,7 +47,6 @@ iframe {
 .stButton>button:hover {
     background-color: #381338 !important;
     color: white !important;
-    /* border: 2px solid #e83757; */
 }
 
 .st-emotion-cache-1rwb540 {

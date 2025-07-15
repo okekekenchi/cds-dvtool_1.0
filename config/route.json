@@ -1,5 +1,5 @@
 {
-  "login": "pages/1_login.py",
-  "register": "pages/2_register.py",
-  "home": "pages/3_home.py"
+  "login": "pages/login.py",
+  "register": "pages/register.py",
+  "home": "pages/home.py"
 }

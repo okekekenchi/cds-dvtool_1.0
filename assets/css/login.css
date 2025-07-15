@@ -6,6 +6,14 @@ section[data-testid="stSidebar"] {
     display: none !important;
 }
 
+header[data-testid="stHeader"] {
+    display: none !important;
+}
+
+footer {
+    visibility: hidden;
+}
+
 .stMainBlockContainer {
     padding-bottom: 20px
 }
