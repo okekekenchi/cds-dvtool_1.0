@@ -111,7 +111,7 @@ def get_file_hash(uploaded_file):
 @authenticated
 def main():
     st.title("New Project")
-    st.session_state.current_page = "pages/4_project.py"
+    st.session_state.current_page = "pages/project.py"
     side_nav()
     init_session_var()
     

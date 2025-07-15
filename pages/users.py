@@ -9,7 +9,7 @@ load_css()
 
 @authenticated
 def main():
-    st.session_state.current_page = "pages/6_users.py"
+    st.session_state.current_page = "pages/users.py"
     side_nav()
     
     st.write("User content goes here")

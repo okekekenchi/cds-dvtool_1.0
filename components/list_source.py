@@ -109,18 +109,26 @@ def model(table_name):
     table_class = table_name[:-1]
     return get_model_class(table_class)
 
-def get_list_from_selected_source(list_source):
-    list_type, source, column = list_source.split('.')
+def get_list_from_selected_source(list_source: str) -> list:
+    parts = list_source.split('.', maxsplit=2)
+    
+    if len(parts) != 3:
+        return None
+    
+    list_type, source, column = parts
+    
+    if list_type not in (list_type.value for list_type in ListType):
+        return None
     
     if list_type == ListType.Master.value:
         with get_db() as db:
-            return model(source).all_df(db, columns=[column]).drop_duplicates()
+            return model(source).all_df(db, columns=[column]).drop_duplicates().values.tolist()
         
     elif list_type == ListType.Sheet.value:
         if source in st.session_state.project['sheets']:
             all_list = st.session_state.project['sheets'][source]
             if column in all_list:
-                return all_list[column].drop_duplicates()
+                return all_list[column].drop_duplicates().values.tolist()
             else:
                 st.warning(f'Column: {column} does not exist in sheet: {source}.')
         else:

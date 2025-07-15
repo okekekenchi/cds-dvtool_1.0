@@ -4,4 +4,4 @@ from enum import Enum, unique
 class ListType(Enum):
     Master = 'master'
     Sheet = 'sheet'
-    Checklist = 'validation_checklist'
+    Checklist = 'checklist'

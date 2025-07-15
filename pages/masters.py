@@ -148,7 +148,7 @@ def create_form():
 @authenticated
 def main():
     st.title("Master Records")
-    st.session_state.current_page = "pages/8_masters.py"
+    st.session_state.current_page = "pages/masters.py"
     side_nav()
     init_session_var()
     

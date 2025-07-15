@@ -1,14 +1,5 @@
 import streamlit as st
-
-def clear_sheets():
-    """Reset all sheets"""
-    st.session_state.update({
-        "validation": {
-            "sheets": [],
-            "joins": [],
-            "conditions": []
-        }
-    })
+from util.project_utils import clear_sheets
     
 @st.dialog('Preview Table', width="large")
 def preview_sheet(df):
@@ -32,6 +23,7 @@ def select_sheets():
     with col1:
         new_sheets = st.multiselect(
                         "Select sheets/tables to validate *",
+                        key="selected_sheets",
                         options=[ option for option in sheet_options if option not in selected_options ],
                         default=None,
                         help="Select which sheets you want to include in validation"
@@ -49,6 +41,7 @@ def select_sheets():
                   icon=":material/refresh:", help="Clear all selected sheets")
              
     if not st.session_state.validation['sheets']:
+        clear_sheets()
         st.write("Your sheet list is empty!")
     else:
         for i, sheet in enumerate(st.session_state.validation['sheets']):

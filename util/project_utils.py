@@ -79,6 +79,16 @@ def get_common_columns(sheet_name1: str, sheet_name2: str) -> list[str]:
     else:
         return []
 
+def clear_sheets():
+    """Reset all sheets"""
+    st.session_state.update({
+        "validation": {
+            "sheets": [],
+            "joins": [],
+            "conditions": []
+        }
+    })
+
 def print_matching_columns(join:dict):
     """
     Retrieves common columns between two tables specified in the 'join' dictionary
