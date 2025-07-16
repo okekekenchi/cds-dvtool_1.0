@@ -6,7 +6,7 @@ def reload_package(package_name: str):
         if name == package_name or name.startswith(f"{package_name}."):
             importlib.reload(sys.modules[name])
 
-# 🔁 Reload util and components before importing anything from them
+# Reload util and components before importing anything from them
 reload_package("util")
 reload_package("utils")
 reload_package("enums")
