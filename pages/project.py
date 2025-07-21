@@ -14,12 +14,7 @@ reload_package("components")
 import streamlit as st
 from utils import get_model_class, system_tables
 from util.auth_utils import authenticated
-from util.project_utils import get_selected_sheets
 from components.side_nav import side_nav
-from components.select_sheets import select_sheets
-from components.join_sheets import join_sheets
-from components.query_builder import build_query
-from loader.config_loader import config
 from database.database import get_db
 import json
 from loader.css_loader import load_css
@@ -114,6 +109,7 @@ def main():
     st.session_state.current_page = "pages/project.py"
     side_nav()
     init_session_var()
+    st.markdown("<p style='margin-top:28px;'></p>", unsafe_allow_html=True)
     
     with st.expander("📂 Project Setup", expanded=True):
         col1, col2 = st.columns([0.55, 0.45])
@@ -181,35 +177,8 @@ def main():
                     st.write(f"**Sheets in Workbook:** {len(st.session_state.project['sheets']) - 8}")
     
     if uploaded_file and st.session_state.project.get('sheets'):
-        with st.expander("✅ Validation", expanded=True):
-            tabs = ["Sheets", "Join Sheets", "Build Query", "Output"]
-            sheet_tab, join_tab, query_tab, output_tab = st.tabs(tabs, width='stretch')
-            count_selected_sheets = len(get_selected_sheets())
-            
-            with sheet_tab:
-                select_sheets()
-            
-            with join_tab:
-                if count_selected_sheets >= 2:
-                    join_sheets()
-                else:
-                    st.info('You need at least two or more sheets/tables to perform a join.')
-            
-            with query_tab:
-                if count_selected_sheets:
-                    build_query()
-                else:
-                    st.info("Select sheets/tables to begin building queries")
-            
-            with output_tab:
-                if count_selected_sheets:
-                    if not st.session_state.queried_df.empty:
-                        st.session_state.queried_df
-                    else:
-                        st.info("No queried result.")
-                else:
-                    st.info("No sheets seleted.")
-                
+        st.info('uploaded')
+        
 if __name__ == "__main__":
     main()
     

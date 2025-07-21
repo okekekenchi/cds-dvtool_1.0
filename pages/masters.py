@@ -4,7 +4,7 @@ from utils import get_model_class, system_fields, bool_fields, required_fields
 from components.side_nav import side_nav
 from loader.config_loader import config
 from loader.css_loader import load_css
-from util.datatable import update_record, get_table_columns, get_table_names, get_table_data, delete_record
+from util.datatable import get_table_columns, get_table_names, get_table_data, delete_record
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 import pandas as pd
 from models.bh_task_type import BhTaskType
@@ -13,7 +13,6 @@ from database.database import get_db, engine
 
 st.set_page_config(page_title="Masters", page_icon=":material/settings:", layout="wide", initial_sidebar_state="expanded")
 load_css('assets/css/project.css')
-
 
 def init_session_var():
   if "selected_table" not in st.session_state:
@@ -25,10 +24,9 @@ def init_session_var():
   if "search_query" not in st.session_state:
     st.session_state.search_query = None
   if "selected_row" not in st.session_state:
-    st.session_state.selected_row = None
+    st.session_state.selected_row = {}
   if "active_records" not in st.session_state:
     st.session_state.active_records = True
-
 
 def load_task_types():
     with get_db() as db:
@@ -52,12 +50,12 @@ def form_action(form_data, action: str):
                     if action.lower() == "create":
                         _, saved = model().first_or_create(db, **form_data)
                     elif action.lower() == "update":
-                        update_record(st.session_state.selected_table, form_data["id"], form_data)
+                        model().update(db, form_data["id"], form_data)
                         saved = True
                     else:
                         st.error(f"Invalid action: {action}")
             except Exception as e:
-                st.error(f"Error saving record: {e}")
+                st.error(f"Error saving record****: {e}")
     with col2:
         if st.form_submit_button("Cancel"):
             st.session_state.new_record = False
@@ -67,7 +65,7 @@ def form_action(form_data, action: str):
         st.success(f"Record {action.lower()}d successfully!")
         st.session_state.new_record = False
         st.session_state.edit_record = None
-        st.session_state.selected_row = None
+        st.session_state.selected_row = {}
         time.sleep(2)
         st.rerun()
 
@@ -92,12 +90,12 @@ def delete_form():
                 st.error(f"Error deleting record: {e}")
     with col2:
         if st.button("Cancel", key="cancel_delete"):
-            st.session_state.selected_row = None
+            st.session_state.selected_row = {}
             st.rerun()
             
     if deleted:
         st.success("Record deleted successfully!")
-        st.session_state.selected_row = None
+        st.session_state.selected_row = {}
         time.sleep(2)
         st.rerun()
         
@@ -152,18 +150,27 @@ def main():
     side_nav()
     init_session_var()
     
+    st.write('')
+    st.write('')
+    st.write('')
+    
     col1, col2, col3, col4 = st.columns([0.35, 0.3, 0.15, 0.2])
     with col1:
-        table_names = get_table_names()
+        exempt_tables = ['validation_checklists']
+        table_names = [ name for name in get_table_names() if name not in exempt_tables ]
         options = { name: config(f'master.{name[:-1]}.label') for name in table_names }
-        
-        selected_table = st.selectbox(
-            "Select a Table:",
-            options.keys(),
-            format_func=lambda x: options[x],
-            key="table_select",
-            index=table_names.index(st.session_state.selected_table) if st.session_state.selected_table in table_names else 0,
-        )
+
+        if options:
+            selected_table = st.selectbox(
+                "Select a Table:",
+                options=options.keys(),
+                format_func=lambda x: options[x],
+                key="table_select",
+                index=table_names.index(st.session_state.selected_table) if st.session_state.selected_table in table_names else 0
+            )
+        else:
+            st.warning("Error loading tables.")
+            
     with col2:
         st.session_state.search_query = st.text_input(
             "Search Records:",
@@ -189,14 +196,14 @@ def main():
         st.session_state.selected_table = selected_table
         st.session_state.edit_record = None
         st.session_state.new_record = False
-        st.session_state.selected_row = None
+        st.session_state.selected_row = {}
         st.rerun()
     
     if toggle_active_records != st.session_state.active_records:
         st.session_state.active_records = toggle_active_records
         st.rerun()
     
-    st.markdown("---")
+    st.divider()
 
     # Main content area
     if st.session_state.selected_table:
@@ -216,7 +223,9 @@ def main():
         # Format Created By
         users = pd.read_sql("SELECT id, full_name FROM users", engine)
         user_map = dict(zip(users['id'], users['full_name']))
-        df['created_by'] = df['created_by'].map(user_map).fillna("System").replace("", "System")
+        user_id = st.session_state.user_id
+        df['created_by'] = df['created_by'].map(lambda x: "Me" if x == user_id else user_map.get(x, "System")).fillna("System").replace("", "System")
+
         
         if "task_type_id" in df:
             task_types = { item['id']: f"{item['task_type']} - {item['desc']}" for item in load_task_types() }
@@ -253,8 +262,10 @@ def main():
                 update_mode=GridUpdateMode.SELECTION_CHANGED,
                 theme='streamlit',
                 enable_enterprise_modules=True,
-                sidebar=True
+                sidebar=True,
+                fit_columns_on_grid_load=True
             )
+            
             # Handle row selection for editing
             selected_rows = grid_response.get("selected_rows", [])
             
@@ -268,7 +279,7 @@ def main():
                 st.session_state.edit_record = None
                 st.session_state.new_record = False
             else:
-                st.session_state.selected_row = None
+                st.session_state.selected_row = {}
         else:
             st.warning("No records found in this table.")
          
@@ -280,15 +291,14 @@ def main():
                     if st.session_state.active_records and st.button("Edit Record", icon=":material/edit:"):
                         st.session_state.edit_record = st.session_state.selected_row
                 with col2:
-                    if st.button("Delete Record", icon=":material/delete:"):
-                        delete_form()
-        
+                    if st.session_state.selected_table not in ['tags']:
+                        st.button("Delete Record", icon=":material/delete:", on_click=delete_form)
         with create_btn_placeholder.container():
-            if not st.session_state.selected_row and st.session_state.selected_table != "validation_checklists":
-                if st.button("New Record", key="create", icon=":material/add:") and selected_table:
+            if not st.session_state.selected_row and st.session_state.selected_table:
+                if st.button("New Record", key="create", icon=":material/add:"):
                     st.session_state.new_record = True
                     st.session_state.edit_record = None
-                    st.session_state.selected_row = None
+                    st.session_state.selected_row = {}
         
         # Edit form
         if st.session_state.edit_record and st.session_state.selected_row:

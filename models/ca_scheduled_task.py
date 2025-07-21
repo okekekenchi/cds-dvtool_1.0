@@ -7,6 +7,6 @@ class CaScheduledTask(BaseModel):
     
     taskcdca_2nd_char = Column(String(50), unique=True, nullable=False)
     description = Column(Text)
-    active = Column(Boolean, default=True)
+    active = Column(Boolean, default=True, index=True)
     created_by = Column(Integer)
     

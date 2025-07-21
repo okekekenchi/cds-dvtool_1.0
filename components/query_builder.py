@@ -1,30 +1,16 @@
-import importlib
-import sys
-
-def reload_package(package_name: str):
-    for name in list(sys.modules):
-        if name == package_name or name.startswith(f"{package_name}."):
-            importlib.reload(sys.modules[name])
-
-# Reload util and components before importing anything from them
-reload_package("util")
-reload_package("utils")
-reload_package("enums")
-reload_package("components")
-
 import pandas as pd
 import streamlit as st
 from utils import alert
 from util.project_utils import operator_map, operators
 from components.list_source import set_list_source_string, get_list_from_selected_source
-from util.project_utils import get_selected_sheets
 
 
-def perform_joins(joins) -> pd.DataFrame:
+def perform_joins(sheets: dict,  joins: dict) -> pd.DataFrame:
     """
     Performs a sequence of Pandas DataFrame joins based on a list of join specifications.
 
     Args:
+        sheets: Selected sheets
         joins: A list of dictionaries, where each dictionary defines a join operation.
                Each join dict is expected to have:
                - 'left_table': str (name of the left table/DataFrame)
@@ -38,14 +24,13 @@ def perform_joins(joins) -> pd.DataFrame:
         or a required sheet is missing.
     """
     result = pd.DataFrame
-    selected_sheets = get_selected_sheets()
     
     for i, join in enumerate(joins):
-        # st.session_state.update.validation['joins'] = []
-        # st.session_state.validation['joins']
-        if join["left_table"] and join["right_table"] and "on_cols" in join:
-            left_df = result if not result.empty and join['left_table'] == result.name else selected_sheets[join["left_table"]]
-            right_df = selected_sheets[join["right_table"]]
+        # st.session_state.update.config['joins'] = []
+        # st.session_state.config['joins']
+        if join["left_table"] and join["right_table"] and "on_cols" in join and len(join["on_cols"]):
+            left_df = result if not result.empty and join['left_table'] == result.name else sheets[join["left_table"]]
+            right_df = sheets[join["right_table"]]
             how = join["join_type"]
             is_anti_join = join["join_type"][:2] == "a_"
             
@@ -57,8 +42,8 @@ def perform_joins(joins) -> pd.DataFrame:
             else:
                 # Handle the case where there's only 1 column
                 cleaned_right_df = right_df[[right_on[0]]].drop_duplicates()
-    
-    
+
+  
 
             if left_on and right_on:
                 try:
@@ -84,10 +69,10 @@ def perform_joins(joins) -> pd.DataFrame:
     return result
 
 
-def get_joined_sheets() -> pd.DataFrame:
-    joins = st.session_state.validation['joins']
-    first_sheet= next(iter(get_selected_sheets().values()))
-    return perform_joins(joins) if joins else first_sheet
+def get_joined_sheets(sheets: dict) -> pd.DataFrame:
+    joins = st.session_state.config['joins']
+    first_sheet= next(iter(sheets.values()))
+    return perform_joins(sheets, joins) if joins else first_sheet
 
   
 def build_condition(df: pd.DataFrame, condition: dict) -> str:
@@ -118,7 +103,7 @@ def build_condition(df: pd.DataFrame, condition: dict) -> str:
         column_char = None
     
     # --- Pre-process values based on column data type ---
-    if pd.api.types.is_numeric_dtype(df[column]):
+    if pd.api.types.is_numeric_dtype(df[column]) and operator not in ['in_list', 'not_in_list']:
         try:
             value = float(value) if value not in ['', None] else None
             if value_2 not in ['', None]:
@@ -234,8 +219,7 @@ def apply_query_conditions(conditions):
     """Apply query conditions to dataframe"""
     df = st.session_state.joined_df
 
-    if not conditions:
-        return df
+    if not conditions: return df
     
     try:
         query_parts = []
@@ -246,27 +230,29 @@ def apply_query_conditions(conditions):
                 query_parts.append(condition_str)
                 
                 # Add the logic operator (And/Or) if it exists and there are more conditions
-                if 'logic' in cond and len(query_parts) > 1:
+                if 'logic' in cond and query_parts:
                     logic_op = ' & ' if cond['logic'].lower() == 'and' else ' | '
                     query_parts.append(logic_op)
         
+        
         # Join all parts and remove trailing operators
         query_str = ''.join(query_parts).rstrip(' &|')
-        
+
         if not query_str:  # No valid conditions
             return df
-            
+        
         return df.query(query_str)
     except Exception as e:
+        st.write(e)
         st.error(f"Query failed: {str(e)}")
         return df
 
-def execute_query():
-    st.session_state.joined_df = get_joined_sheets()
+def execute_query(sheets: dict):
+    st.session_state.joined_df = get_joined_sheets(sheets)
     st.session_state.queried_df = st.session_state.joined_df
     
-    if st.session_state.validation['conditions'] and not st.session_state.joined_df.empty:
-        st.session_state.queried_df = apply_query_conditions(st.session_state.validation['conditions'])
+    if st.session_state.config['conditions'] and not st.session_state.joined_df.empty:
+        st.session_state.queried_df = apply_query_conditions(st.session_state.config['conditions'])
 
 
 def on_list_type_changed():
@@ -275,17 +261,17 @@ def on_list_type_changed():
     
 def remove_condition(index):
     """Remove a condition from the list"""
-    st.session_state.validation['conditions'].pop(index)
+    st.session_state.config['conditions'].pop(index)
 
 def clear_conditions():
     """Reset all conditions"""
-    st.session_state.validation['conditions'] = []
+    st.session_state.config['conditions'] = []
     
 @st.dialog('List')
 def preview_list_from_selected_source(list_source):
     st.dataframe(get_list_from_selected_source(list_source))
         
-def build_query():
+def build_query(sheets: dict):
     col1, col2, col3, col4 = st.columns([3, 3, 3, 3]) # Add new query condition
     new = {}
     new['value_2'] = None
@@ -293,7 +279,7 @@ def build_query():
     value_1_is_required = True
     
     with col1:
-        joined_df = get_joined_sheets()
+        joined_df = get_joined_sheets(sheets)
         new['column'] = st.selectbox("Column *", key="new_column",
                                      options=([] if joined_df.empty else joined_df.columns))
         character_placeholder = st.empty()
@@ -328,12 +314,14 @@ def build_query():
                 if st.session_state.list_source_str:
                     new['value_1'] = st.text_input("List source *", key="nv_lsource",
                                                     value=st.session_state.list_source_str, disabled=True)
-                    new['value_2'] = st.text_input("Character", key="nv_list_character")
+                    new['value_2'] = st.number_input("Character", key="nv_list_character", min_value=0,
+                                                     step=1, max_value=100)
                 else:
                     st.warning('No list source selected.')
             
             with character_placeholder.container():
-                new['column_char'] = st.text_input("Character", key="nv_char")
+                new['column_char'] = st.number_input("Character", key="nv_char", min_value=0,
+                                                     step=1, max_value=100)
                 
         elif new['operator'] == 'between':
             new['value_1'] = st.text_input("From value *", key="nv_2")
@@ -373,8 +361,8 @@ def build_query():
                 alert("Fill all required fields")
                 return
             
-            if new not in st.session_state.validation['conditions']:
-                st.session_state.validation['conditions'].append(new)
+            if new not in st.session_state.config['conditions']:
+                st.session_state.config['conditions'].append(new)
                 st.rerun()
             else:
                 alert("You have already this condition")
@@ -383,14 +371,14 @@ def build_query():
         st.button("", on_click=clear_conditions, icon=":material/refresh:",
                   help="Clear all conditions", key="clear_conditions")
     
-    if st.session_state.validation['conditions']:
+    if st.session_state.config['conditions']:
         columns = ['Column', 'Character', 'Operator', 'Value', 'Logic', 'Action']
         
         for i, col in enumerate(st.columns([0.23, 0.2, 0.2, 0.2, 0.15, 0.07])):
             with col:
                 st.write(f"**{columns[i]}**")
         
-        for i, cond in enumerate(st.session_state.validation['conditions']):
+        for i, cond in enumerate(st.session_state.config['conditions']):
             col1, col2, col3, col4, col5, col6 = st.columns([0.23, 0.2, 0.2, 0.2, 0.15, 0.07])
             with col1:
                 st.write(f"{cond['column']}")
@@ -411,5 +399,5 @@ def build_query():
                 st.button("", icon=":material/delete:", help="Delete query condition",
                           key=f"remove_condition_{i}", on_click=remove_condition, args=(i,))
                 
-    execute_query()
+    execute_query(sheets)
 

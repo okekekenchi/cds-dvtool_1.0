@@ -5,7 +5,7 @@ class Session(BaseModel):
     __tablename__ = "sessions"
     
     id = Column(String(100), primary_key=True, index=True)
-    user_id = Column(Integer)
+    user_id = Column(Integer, index=True)
     ip_address = Column(String(18), nullable=False)
     user_agent = Column(Text, nullable=True)
     payload = Column(JSON, default={})

@@ -7,6 +7,6 @@ class CaTaskCodeVsTaskId(BaseModel):
     task_code = Column(String, unique=True, nullable=False)
     desc_1 = Column(String, nullable=False)
     desc_2 = Column(String, nullable=False)
-    active = Column(Boolean, default=True)
+    active = Column(Boolean, default=True, index=True)
     created_by = Column(Integer)
     

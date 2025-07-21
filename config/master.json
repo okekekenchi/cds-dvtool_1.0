@@ -1,4 +1,9 @@
 {
+  "tag": {
+    "label": "Tag",
+    "data": []
+  },
+  
   "validation_checklist": {
     "label": "Validation Checklist",
     "data": [

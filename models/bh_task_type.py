@@ -6,6 +6,6 @@ class BhTaskType(BaseModel):
     
     task_type = Column(String, unique=True, nullable=False)
     desc = Column(Text, unique=True)
-    active = Column(Boolean, default=True)
+    active = Column(Boolean, default=True, index=True)
     created_by = Column(Integer)
     

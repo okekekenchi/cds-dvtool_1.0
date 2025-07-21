@@ -6,6 +6,6 @@ class CaTaskCodeVsHgSmrCode(BaseModel):
     
     taskcdca = Column(String, unique=True, nullable=False)
     smrcodhg = Column(String, unique=True, nullable=False)
-    active = Column(Boolean, default=True)
+    active = Column(Boolean, default=True, index=True)
     created_by = Column(Integer)
     

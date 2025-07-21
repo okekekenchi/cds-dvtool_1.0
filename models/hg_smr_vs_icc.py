@@ -6,6 +6,6 @@ class HgSmrVsIcc(BaseModel):
     
     smrcodhg = Column(String(10), unique=True, nullable=False)
     itmcathg = Column(String(50), unique=True, nullable=False)
-    active = Column(Boolean, default=True)
+    active = Column(Boolean, default=True, index=True)
     created_by = Column(Integer)
     

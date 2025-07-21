@@ -5,7 +5,7 @@ from components.join_conditions import join_conditions
 from util.project_utils import print_matching_columns
 import pandas as pd
  
-def join_sheets():
+def join_sheets(sheets: dict):
     """Renders UI for selecting and joining sheets for validation.
     
     Allows users to:
@@ -22,9 +22,9 @@ def join_sheets():
     with col1:
         new_join['left_table'] = st.selectbox(
                                     "Left Table *",
-                                    options=st.session_state.validation['sheets'],
+                                    options=sheets,
                                     index=None,
-                                    help="Select which sheets you want to include in validation"
+                                    help="Select which sheets/tables you want to include in the validation"
                                 )
     with col2:
         new_join['join_type'] = st.selectbox(
@@ -37,10 +37,10 @@ def join_sheets():
     with col3:
         new_join['right_table'] = st.selectbox(
                                         "Right Table *",
-                                        options=st.session_state.validation['sheets'],
+                                        options=sheets,
                                         index=None,
-                                        help="Select which sheets you want to include in validation"
-                                    )                    
+                                        help="Select which sheets/tables you want to include in the validation"
+                                    )
     with col4:
         if st.button("Add", key="add_joins", icon=":material/add:"):
             if not new_join['left_table'] or not new_join['right_table'] or not new_join['join_type']:
@@ -51,19 +51,19 @@ def join_sheets():
                 alert("You have selected the same option for both left and right tables")
                 return
             
-            if new_join not in st.session_state.validation['joins']:
-                st.session_state.validation['joins'].append(new_join)
+            if new_join not in st.session_state.config['joins']:
+                st.session_state.config['joins'].append(new_join)
                 st.rerun()
             else:
                 alert("You have already joined these sheets")
     
-    print_matching_columns(new_join)
+    print_matching_columns(sheets, new_join)
         
-    if not st.session_state.validation['joins']:
+    if not st.session_state.config['joins']:
         st.write("Your join list is empty!")
     else:
         # View join list
-        for idx, join in enumerate(st.session_state.validation['joins']):
+        for idx, join in enumerate(st.session_state.config['joins']):
             st.divider()
             col1, col2 = st.columns([0.8, 0.2])
             
@@ -79,11 +79,11 @@ def join_sheets():
             with col2:
                 if st.button("Conditions", key=f"join_conditions_{idx}"):
                     if join['left_table'] and join['right_table'] and join['join_type']:
-                        join_conditions(idx, join)
+                        join_conditions(sheets, idx, join)
                     else:
                         alert("Fill all required fields")
                 
                 if st.button(f"Delete", key=f"delete_join_conditions_{idx}", icon=":material/delete:"):
-                    del st.session_state.validation['joins'][idx]
+                    del st.session_state.config['joins'][idx]
                     st.rerun()
 

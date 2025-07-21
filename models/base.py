@@ -3,6 +3,7 @@ from datetime import datetime
 from database.database import Base, engine
 import pytz
 import pandas as pd
+import json
 
 class BaseModel(Base):
   __abstract__ = True
@@ -105,6 +106,71 @@ class BaseModel(Base):
     params = {**kwargs, **(defaults or {})}
     instance = cls.create(db, **params)
     return instance, True
+
+  def clone(self, db, attr=None, key="id"):
+    """
+    Create a clone of the current instance with modified attributes.
+    
+    Args:
+        db: SQLAlchemy session
+        attr: Dictionary of attributes to modify in the clone
+        key: Attribute name to exclude from cloning (default is "id")
+    
+    Returns:
+        Cloned instance
+        
+    Example:
+      original = SomeModel.find(db, 1)
+      clone = original.clone(db, attr={'name': 'New Name'})
+    """
+    if attr is None: attr = {}
+    
+    # Get all column names except the key attribute
+    # Create dictionary of current attributes
+    # Update with any modified attributes
+    # Create and return new instance
+    columns = [c.name for c in self.__table__.columns if c.name != key]
+    values = {column: getattr(self, column) for column in columns}
+    values.update(attr)
+    return self.__class__.create(db, **values)
+  
+  @classmethod
+  def update(cls, db, id, updates):
+    """
+    Update a record by ID with the provided attributes object
+    
+    Args:
+        db: SQLAlchemy session
+        id: Primary key of the record to update
+        updates: Dictionary/object of attributes to update
+        
+    Returns:
+        Updated instance or None if not found
+        
+    Example:
+        updates = {
+            'name': 'New Name',
+            'config': {'key': 'value'},  # SQLAlchemy will handle JSON conversion
+            'tags': [1, 2, 3]           # SQLAlchemy will handle JSON conversion
+        }
+        updated = SomeModel.update(db, 1, updates)
+    """
+    instance = db.query(cls).get(id)
+    if not instance:
+      return None
+    
+    table_columns = {column.name for column in cls.__table__.columns}
+        
+    for key, value in updates.items():
+      if key.startswith('_') or key not in table_columns or key == 'id':
+          continue
+            
+      setattr(instance, key, value)
+        
+    instance.updated_at = datetime.now(pytz.utc)
+    db.commit()
+    db.refresh(instance)
+    return instance
   
   def save(self, db):
     """Save changes to the current instance"""
@@ -117,7 +183,7 @@ class BaseModel(Base):
     """Delete the current instance"""
     db.delete(self)
     db.commit()
-    
+  
   def to_dict(self):
     return {c.name: getattr(self, c.name) for c in self.__table__.columns}
     
@@ -128,3 +194,4 @@ def enable_sqlite_fks(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
+    

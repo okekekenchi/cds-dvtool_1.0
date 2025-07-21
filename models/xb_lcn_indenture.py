@@ -7,6 +7,6 @@ class XbLcnIndenture(BaseModel):
     lsaconxb_char_length = Column(Integer, nullable=False)
     lcnindxb = Column(String(50), unique=True, nullable=False)
     desc = Column(Text, unique=True)
-    active = Column(Boolean, default=True)
+    active = Column(Boolean, default=True, index=True)
     created_by = Column(Integer)
     

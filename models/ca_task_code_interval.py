@@ -8,6 +8,6 @@ class CaTaskCodeInterval(BaseModel):
     task_code_interval_desc = Column(Text, unique=True, nullable=False)
     bh_freq = Column(Integer, nullable=False)
     bh_freq_mb = Column(String, default={})
-    active = Column(Boolean, default=True)
+    active = Column(Boolean, default=True, index=True)
     created_by = Column(Integer)
     

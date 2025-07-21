@@ -7,7 +7,11 @@ from models.base import BaseModel
 system_tables = ["users","sessions"]
 system_fields = ["created_by", "created_at", "updated_at"]
 bool_fields = ["active"]
-required_fields = ["task_type_id","meas_base","mb_desc"]
+required_fields = [
+    "task_type_id","task_type","meas_base","mb_desc","lsaconxb_char_length","lcnindxb",
+    "taskcdca_2nd_char","task_code_interval","task_code_interval_desc","bh_freq","bh_freq_mb",
+    "task_code","desc_1","desc_2","smrcodhg","",""
+]
 
 # Session management
 def clear_db():
