@@ -10,7 +10,22 @@
       {
         "code": "Q001",
         "name": "XB without XF",
-        "description": "Table XB is the Logistic Support Analysis (LSA) Control Number. Table XF is the System / End Item Serial Number. This query identifies where a record exists in table XB but no child record exists in table XF for the same LSACONXB & ALTLCNXB."
+        "description": "Table XB is the Logistic Support Analysis (LSA) Control Number. Table XF is the System / End Item Serial Number. This query identifies where a record exists in table XB but no child record exists in table XF for the same LSACONXB & ALTLCNXB.",
+        "config": {
+          "sheets": ["XB", "XF"],
+          "joins": [
+            {
+              "left_table": "XB",
+              "join_type": "a_left",
+              "right_table": "XF",
+              "on_cols": [
+                {"left_column": "lsaconxb", "right_column": "lsaconxf"},
+                {"left_column": "altlcnxb", "right_column": "altlcnxf"}
+              ]
+            }
+          ],
+          "conditions": []
+        }
       },
       {
         "code": "Q002",
