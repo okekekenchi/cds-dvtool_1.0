@@ -16,5 +16,5 @@ class ValidationChecklist(BaseModel):
     
     _default = {}
     
-    creator = relationship("User", backref="checklists")
+    # creator = relationship("User", backref="checklists")
     

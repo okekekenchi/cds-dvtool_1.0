@@ -53,6 +53,15 @@ def init_form():
     st.session_state.checklist_description = st.session_state.selected_checklist.get('description')
     st.session_state.checklist_active = st.session_state.selected_checklist.get('active')        
     st.session_state.checklist_tags = st.session_state.selected_checklist.get('tags')
+    
+    st.session_state.update({
+        "checklist": st.session_state.selected_checklist,
+        "config": st.session_state.selected_checklist.get('config'),
+        "joined_df": pd.DataFrame(),
+        "queried_df": pd.DataFrame(),
+        "list_type": None,
+        "list_source_str": None
+    })
 
 def form_fields():        
     col11, col12 = st.columns([0.3, 0.7])
