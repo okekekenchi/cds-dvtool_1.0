@@ -126,13 +126,13 @@ def perform_joins(sheets: dict,  joins: list[dict]) -> pd.DataFrame:
             if col["left_column"] in left_df.columns:
                 left_on.append(col["left_column"])
             else:
-                st.error(f"Column **{col["left_column"]}** not found in resulting joined entity")
+                st.error(f"Column **{col['left_column']}** not found in resulting joined entity")
                 return pd.DataFrame()
                 
             if col["right_column"] in right_df.columns:
                 right_on.append(col["right_column"])
             else:
-                st.error(f"Column **{col["right_column"]}** not found in resulting joined entity")
+                st.error(f"Column **{col['right_column']}** not found in resulting joined entity")
                 return pd.DataFrame()
             
             # Convert types if needed
