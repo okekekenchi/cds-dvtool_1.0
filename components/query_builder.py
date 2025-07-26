@@ -161,7 +161,6 @@ def perform_joins(sheets: dict,  joins: list[dict]) -> pd.DataFrame:
                 st.error(f"Join column **{str(e)}** not found in resulting joined entity")
                 return pd.DataFrame
             except Exception as e:
-                st.write(e)
                 st.error(f"Join failed between {left_table} and {right_table}: {str(e)}")
                 return pd.DataFrame
         else:
