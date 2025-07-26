@@ -34,14 +34,14 @@ def join_conditions(sheets:dict, idx:int, join:dict):
     
     with col1:
         on_col['left_column'] = st.selectbox(
-                                    "Left Column",
+                                    "Left Column *",
                                     options=get_sheet_columns(sheets, join['left_table']),
                                     index=None,
                                     help="Select which sheets you want to include in validation"
                                 )
     with col2:
         on_col['right_column'] = st.selectbox(
-                                    "Right Column",
+                                    "Right Column *",
                                     options=get_sheet_columns(sheets, join['right_table']),
                                     index=None,
                                     help="Select the column you want to join."

@@ -125,31 +125,29 @@ def get_user_mapping() -> dict:
             st.session_state.user_id: "Me"}
     
 def handle_selection_change(selected_rows: list[dict]):
+    if 'selected_checklist' not in st.session_state:
+        st.session_state.selected_checklist = {}
+        
     # Convert to list of dicts if it's a DataFrame
     if hasattr(selected_rows, 'to_dict'):
         selected_rows = selected_rows.to_dict('records')
 
     # Now safely check if we have selected rows
     if isinstance(selected_rows, list) and len(selected_rows) > 0:
+        
         selected_checklist = selected_rows[0]
         selected_checklist.update({
             "tags": json.loads(selected_checklist.get('tags')),
             "config": json.loads(selected_checklist.get('config'))
         })
         
-        if st.session_state.selected_checklist != selected_checklist:
+        if st.session_state.selected_checklist.get('id') != selected_checklist['id']:
             st.session_state.selected_checklist = selected_checklist
-            st.session_state.update_checklist = True
-            st.session_state.create_checklist = False
             st.session_state.reset_form = True
             st.rerun()
-        
     else:
         if st.session_state.selected_checklist != {}:
             st.session_state.selected_checklist = {}
-            st.session_state.update_checklist = False
-            st.session_state.create_checklist = True
-            st.session_state.reset_form = True
             st.rerun()
  
 def checklist_view():
@@ -204,7 +202,7 @@ def checklist_view():
     for column in COLUMNS_TO_HIDE:
         if column in df:
             gb.configure_column(field=column, hide=True)
-                
+    
     grid_response = AgGrid(
         df,
         gridOptions=gb.build(),
@@ -212,10 +210,11 @@ def checklist_view():
         theme='streamlit',
         enable_enterprise_modules=True,
         sidebar=True,
-        fit_columns_on_grid_load=True
+        fit_columns_on_grid_load=True,
+        key="checklist_datatable"
     )
-    
-    handle_selection_change(selected_rows=grid_response.get("selected_rows", []))            
+    # st.write(grid_response.get("selected_rows"))
+    handle_selection_change(grid_response.get("selected_rows"))
     
     # # Show action buttons for selected row
     with action_placeholder.container(): 

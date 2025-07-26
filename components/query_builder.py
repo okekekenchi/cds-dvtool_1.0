@@ -4,65 +4,165 @@ from utils import alert
 from util.project_utils import operator_map, operators
 from components.list_source import set_list_source_string, get_list_from_selected_source
 
-
-def perform_joins(sheets: dict,  joins: dict) -> pd.DataFrame:
+def detect_exact_dtype(series: pd.Series) -> str:
     """
-    Performs a sequence of Pandas DataFrame joins based on a list of join specifications.
+    Detect the exact data type of a pandas Series, especially for object columns.
+    
+    Args:
+        series: pandas Series to analyze
+        
+    Returns:
+        str: One of 'string', 'integer', 'float', 'datetime', 'boolean', 'mixed', or 'unknown'
+    """
+    if not pd.api.types.is_object_dtype(series):
+        return str(series.dtype)
+    
+    # Check for datetime
+    if pd.api.types.is_datetime64_any_dtype(series):
+        return 'datetime'
+    
+    # Try converting to different types to detect actual content
+    try:
+        # Check if it's numeric
+        numeric = pd.to_numeric(series, errors='raise')
+        if all(numeric == numeric.astype(int)):
+            return 'integer'
+        return 'float'
+    except:
+        pass
+    
+    # Check for boolean
+    if pd.api.types.is_bool_dtype(series):
+        return 'boolean'
+    
+    # Check if it's string (after trying other types)
+    if pd.api.types.is_string_dtype(series):
+        return 'string'
+    
+    # Check for mixed types
+    unique_types = set(type(x) for x in series.dropna().head(100))
+    if len(unique_types) > 1:
+        return 'mixed'
+    
+    return 'unknown'
+
+def perform_joins(sheets: dict,  joins: list[dict]) -> pd.DataFrame:
+    """
+    Performs a sequence of Pandas DataFrame joins based on join specifications.
 
     Args:
-        sheets: Selected sheets
-        joins: A list of dictionaries, where each dictionary defines a join operation.
-               Each join dict is expected to have:
-               - 'left_table': str (name of the left table/DataFrame)
-               - 'right_table': str (name of the right table/DataFrame)
-               - 'join_type': str (e.g., 'inner', 'left', 'right', 'outer')
-               - 'on_cols': list of dicts, each with 'left_column' and 'right_column'
+        sheets: Dictionary of {sheet_name: DataFrame} containing all available sheets
+        joins: List of join specifications where each join contains:
+            - left_table: Name of the left table
+            - right_table: Name of the right table
+            - join_type: Type of join ('inner', 'left', 'right', 'outer', 'a_inner', etc.)
+            - on_cols: List of dicts with 'left_column' and 'right_column' pairs
 
     Returns:
-        A pandas DataFrame representing the result of the chained joins, or None
-        if no joins are specified, an invalid join definition is found,
-        or a required sheet is missing.
+        pd.DataFrame: Result of the joins, or empty DataFrame if:
+            - No joins specified
+            - Invalid join definition
+            - Missing required sheet
+            - Join column errors
+
+    Raises:
+        ValueError: If input validation fails
     """
+    
+    def convert_column_types(left_df, right_df, left_col, right_col):
+        """Convert join columns to compatible types"""
+        left_type = detect_exact_dtype(left_df[left_col])
+        right_type = detect_exact_dtype(right_df[right_col])
+        
+        compatible_types = {
+            'integer': {'integer', 'float'},
+            'float': {'integer', 'float'},
+            'string': {'string'},
+            'datetime': {'datetime'}
+        }
+        
+        try:
+            if left_type in compatible_types and right_type in compatible_types[left_type]:
+                return left_df, right_df
+            else:
+                left_df[left_col] = left_df[left_col].astype(str)
+                right_df[right_col] = right_df[right_col].astype(str)
+        except Exception as e:
+            st.error(f"Could not convert {left_col} and {right_col} to compatible types: {str(e)}")
+            return None, None
+            
+        return left_df, right_df
+    
     result = pd.DataFrame
     
     for i, join in enumerate(joins):
-        # st.session_state.update.config['joins'] = []
-        # st.session_state.config['joins']
-        if join["left_table"] and join["right_table"] and "on_cols" in join and len(join["on_cols"]):
-            left_df = result if not result.empty and join['left_table'] == result.name else sheets[join["left_table"]]
-            right_df = sheets[join["right_table"]]
-            how = join["join_type"]
-            is_anti_join = join["join_type"][:2] == "a_"
-            
-            left_on = [ col["left_column"] for col in join["on_cols"] ]
-            right_on = [ col["right_column"] for col in join["on_cols"] ]
-            
-            if len(right_on) >= 2:
-                cleaned_right_df = right_df[[right_on[0], right_on[1]]].drop_duplicates()
-            else:
-                # Handle the case where there's only 1 column
-                cleaned_right_df = right_df[[right_on[0]]].drop_duplicates()
+        # Validate join specification
+        required_keys = {'left_table', 'right_table', 'join_type', 'on_cols'}
+        if not all(k in join for k in required_keys):
+            st.error(f"Missing required fields in join specification")
+            return pd.DataFrame()
+        
+        on_cols = join['on_cols']
+        join_type = join['join_type']
+        left_table = join['left_table']
+        right_table = join['right_table']
+        is_anti_join = join_type[:2] == "a_"
 
-  
-
-            if left_on and right_on:
-                try:
-                    result = pd.merge(left_df,
-                                    cleaned_right_df,
-                                    left_on=left_on,
-                                    right_on=right_on,
-                                    how=(join["join_type"]).replace("a_", ""),
-                                    indicator=is_anti_join
-                                    )
-                    
-                    if is_anti_join:
-                        result = result.query('_merge == "left_only"').drop('_merge', axis=1)
-                        
-                except Exception as e:
-                    e
-                    st.error(f"An error occurred during join {i+1} ('{join['left_table']}' {how} '{join['right_table']}'): {e}")
-                    return pd.DataFrame
+        if not len(on_cols):
+            st.error(f"Missing required conditions in join specification")
+            return pd.DataFrame
+        
+        left_df = result if not result.empty and left_table == getattr(result, 'name', None) else sheets.get(left_table)
+        right_df = sheets.get(right_table)
+        
+        if left_df is None or right_df is None:
+            st.error(f"Missing table: {left_table if left_df is None else right_table}")
+            return pd.DataFrame()
+        
+        left_on = []
+        right_on = []
+        
+        for col in on_cols:
+            if col["left_column"] in left_df.columns:
+                left_on.append(col["left_column"])
             else:
+                st.error(f"Column **{col["left_column"]}** not found in resulting joined entity")
+                return pd.DataFrame()
+                
+            if col["right_column"] in right_df.columns:
+                right_on.append(col["right_column"])
+            else:
+                st.error(f"Column **{col["right_column"]}** not found in resulting joined entity")
+                return pd.DataFrame()
+            
+            # Convert types if needed
+            left_df, right_df = convert_column_types(left_df, right_df, col["left_column"], col["right_column"])
+            if left_df is None or right_df is None:
+                    return pd.DataFrame()
+                
+        if len(right_on) >= 2:
+            cleaned_right_df = right_df[[right_on[0], right_on[1]]].drop_duplicates()
+        else:
+            # Handle the case where there's only 1 column
+            cleaned_right_df = right_df[[right_on[0]]].drop_duplicates()
+        
+        if left_on and right_on:
+            try:
+                result = pd.merge(left_df, cleaned_right_df,
+                                left_on=left_on, right_on=right_on,
+                                how=(join_type).replace("a_", ""),
+                                indicator=is_anti_join
+                                )
+                
+                if is_anti_join:
+                    result = result.query('_merge == "left_only"').drop('_merge', axis=1)
+                
+            except KeyError as e:
+                st.error(f"Join column **{str(e)}** not found in resulting joined entity")
+                return pd.DataFrame
+            except Exception as e:
+                st.write(e)
+                st.error(f"Join failed between {left_table} and {right_table}: {str(e)}")
                 return pd.DataFrame
         else:
             return pd.DataFrame
@@ -248,7 +348,6 @@ def apply_query_conditions(conditions):
         return df
 
 def execute_query(sheets: dict):
-    st.session_state.joined_df = get_joined_sheets(sheets)
     st.session_state.queried_df = st.session_state.joined_df
     
     if st.session_state.config['conditions'] and not st.session_state.joined_df.empty:
@@ -277,11 +376,11 @@ def build_query(sheets: dict):
     new['value_2'] = None
     list_type = None
     value_1_is_required = True
-    
+    joined_df = st.session_state.joined_df = get_joined_sheets(sheets)
+    options = ([] if joined_df.empty else joined_df.columns.to_list())
+        
     with col1:
-        joined_df = get_joined_sheets(sheets)
-        new['column'] = st.selectbox("Column *", key="new_column",
-                                     options=([] if joined_df.empty else joined_df.columns))
+        new['column'] = st.selectbox("Column *", key="new_column", options=options)
         character_placeholder = st.empty()
         
     with col2:

@@ -66,7 +66,7 @@ def form_action(form_data, action: str):
         st.session_state.new_record = False
         st.session_state.edit_record = None
         st.session_state.selected_row = {}
-        time.sleep(2)
+        time.sleep(1.5)
         st.rerun()
 
 @st.dialog("Delete Record")
@@ -96,7 +96,7 @@ def delete_form():
     if deleted:
         st.success("Record deleted successfully!")
         st.session_state.selected_row = {}
-        time.sleep(2)
+        time.sleep(1.5)
         st.rerun()
         
 def form_fields(data):

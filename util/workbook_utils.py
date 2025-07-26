@@ -24,7 +24,7 @@ def load_sheet(_excel_file, sheet_name):
     Elimimate columnms with whitespace/empty headers
     """
     try:    
-        df = pd.read_excel(_excel_file, sheet_name=sheet_name)
+        df = pd.read_excel(_excel_file, sheet_name=sheet_name,na_values=None)
         columns_to_drop = df.columns[df.columns.str.strip() == '']
 
         return df if columns_to_drop.empty else df.drop(columns=columns_to_drop)

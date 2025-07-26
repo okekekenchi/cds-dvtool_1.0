@@ -26,5 +26,5 @@ def init_db():
         for data in masters.get(table, {}).get("data", []):
             with get_db() as db:
                 model = get_model_class(table)
-                model.first_or_create(db, **data)
+                model.first_or_create(db, find_by="code", **data)
     

@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, DateTime, event
-from datetime import datetime
 from database.database import Base, engine
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime
 import pytz
 import pandas as pd
 import json
@@ -97,15 +98,50 @@ class BaseModel(Base):
     return db.query(cls).filter_by(**filters)
   
   @classmethod
-  def first_or_create(cls, db, defaults=None, **kwargs):
-    """Find first or create with defaults"""
-    instance = db.query(cls).filter_by(**kwargs).first()
-    if instance:
-      return instance, False
+  def first_or_create(cls, db, find_by: str = "id", defaults: dict = None, **kwargs):
+    """
+    Find first record matching criteria or create new record.
     
-    params = {**kwargs, **(defaults or {})}
-    instance = cls.create(db, **params)
-    return instance, True
+    Args:
+      db: Database session
+      find_by: Column name to use as unique finder (e.g., 'code')
+      defaults: Default values for creation if record doesn't exist
+      **kwargs: Filter conditions
+        
+    Returns:
+      tuple: (instance, created) where created is boolean indicating if new record was created
+        instance, created = Model.first_or_create(
+          db,
+          code="ABC123",
+          name="Test Item",
+          defaults={"active": True}
+        )
+    Example:
+
+    """
+    # If find_by specified, use just that column for lookup
+    if find_by and find_by in kwargs:
+        lookup = {find_by: kwargs[find_by]}
+        instance = db.query(cls).filter_by(**lookup).first()
+    else:
+        # Otherwise use all kwargs for lookup
+        instance = db.query(cls).filter_by(**kwargs).first()
+    
+    if instance:
+        return instance, False
+    
+    try:
+        # Combine kwargs and defaults for creation
+        params = {**kwargs, **(defaults or {})}
+        instance = cls.create(db, **params)
+        db.commit()
+        return instance, True
+    except IntegrityError as e:
+        db.rollback()
+        raise ValueError(f"Creation failed due to integrity error: {str(e)}")
+    except Exception as e:
+        db.rollback()
+        raise Exception(f"Error in first_or_create: {str(e)}")  
 
   def clone(self, db, attr=None, key="id"):
     """

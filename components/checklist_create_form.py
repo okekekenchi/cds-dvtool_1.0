@@ -1,12 +1,12 @@
-# import importlib
-# import sys
+import importlib
+import sys
 
-# def reload_package(package_name: str):
-#     for name in list(sys.modules):
-#         if name == package_name or name.startswith(f"{package_name}."):
-#             importlib.reload(sys.modules[name])
+def reload_package(package_name: str):
+    for name in list(sys.modules):
+        if name == package_name or name.startswith(f"{package_name}."):
+            importlib.reload(sys.modules[name])
 
-# reload_package("components.select_sheets")
+reload_package("components.select_sheets")
 
 import pandas as pd
 import streamlit as st
@@ -40,8 +40,6 @@ config = {
 }
 
 def init_session_var():
-    if 'reset_form' not in st.session_state:
-        st.session_state.reset_form = True
     if 'checklist' not in st.session_state:
         st.session_state.checklist = checklist
     if 'config' not in st.session_state:

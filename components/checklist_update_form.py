@@ -1,13 +1,13 @@
-# import importlib
-# import sys
+import importlib
+import sys
 
-# def reload_package(package_name: str):
-#     for name in list(sys.modules):
-#         if name == package_name or name.startswith(f"{package_name}."):
-#             importlib.reload(sys.modules[name])
+def reload_package(package_name: str):
+    for name in list(sys.modules):
+        if name == package_name or name.startswith(f"{package_name}."):
+            importlib.reload(sys.modules[name])
 
-# reload_package("components.select_sheets")
-# reload_package("components.query_builder")
+reload_package("components.select_sheets")
+reload_package("components.query_builder")
 
 import pandas as pd
 import streamlit as st
@@ -51,7 +51,7 @@ def init_form():
     st.session_state.checklist_code = st.session_state.selected_checklist.get('code')
     st.session_state.checklist_name = st.session_state.selected_checklist.get('name')
     st.session_state.checklist_description = st.session_state.selected_checklist.get('description')
-    st.session_state.checklist_active = st.session_state.selected_checklist.get('active')        
+    st.session_state.checklist_active = st.session_state.selected_checklist.get('active')
     st.session_state.checklist_tags = st.session_state.selected_checklist.get('tags')
     
     st.session_state.update({
@@ -69,6 +69,7 @@ def form_fields():
         st.session_state.checklist['code'] = st.text_input(
                                                 "Checklist Code *", help="Must be Unique",
                                                 key="checklist_code", max_chars=15, disabled=True)
+        
     with col12:
         st.session_state.checklist['name'] = st.text_input(
                                                 "Name *", help="Must be Unique",
@@ -76,7 +77,7 @@ def form_fields():
         
     st.session_state.checklist['description'] = st.text_area(
                                                     "Description *", height=70,
-                                                    key="checklist_description", max_chars=200)
+                                                    key="checklist_description", max_chars=400)
     
     col31, col32 = st.columns([0.8, 0.2], vertical_alignment='center')
         
@@ -124,18 +125,19 @@ def save_checklist():
             checklist['config'] = st.session_state.config
             
             with get_db() as db:
-                ValidationChecklist.update(db, st.session_state.selected_checklist.get('id'), checklist)
+                ValidationChecklist.update(db, st.session_state.checklist['id'], checklist)
                 updated = True
             
             if updated:
-                st.switch_page("pages/checklist.py")
+                st.toast("Record Updated")
+                st.rerun()
             else:
                 alert('Error: Could not update record')
     except IntegrityError:
         st.toast(f"The 'Code' and 'Name' provided must be unique")
     except Exception as e:
         st.toast(f"Error updating record__: {e}")
-        
+    
 def get_selected_sheets(all_sheets: dict) -> dict:
     selected_sheet_names = st.session_state.config['sheets']
     return { name: all_sheets.get(name) for name in selected_sheet_names }
@@ -150,11 +152,11 @@ def reset_form():
         "list_source_str": None
     })
     
-    st.session_state.reset_form = True
+    st.session_state.reset_form = False
     st.rerun()
 
 def selected_sheets_and_columns_are_present_in_file(sheets:dict):
-    config_db = st.session_state.selected_checklist.get('config')
+    config_db = st.session_state.config
     columns_across_sheets = []
 
     if config_db['sheets']:
@@ -308,10 +310,10 @@ def checklist_update_form():
         with output_tab:
             if len(selected_sheets):
                 if not st.session_state.queried_df.empty:
-                    st.info(f"{len(st.session_state.queried_df)} record(s) returned by query.")
+                    st.info(f"{len(st.session_state.queried_df)} record(s) returned by the query.")
                     st.write(st.session_state.queried_df)
                 else:
                     st.info("No queried result.")
             else:
                 st.info("No sheets seleted.")
-                
+    

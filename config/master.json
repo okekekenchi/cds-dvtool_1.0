@@ -30,27 +30,89 @@
       {
         "code": "Q002",
         "name": "HG without HO",
-        "description": "Tables HG is the Part Application Provisioning. Table HO is the Provisioning System / End Item Usable On Code. This query identifies where a record exists in table HG but no child record exists in table HO for the same LSACONXB, ALTLCNXB, CAGECDXH & REFNUMHA."
+        "description": "Tables HG is the Part Application Provisioning. Table HO is the Provisioning System / End Item Usable On Code. This query identifies where a record exists in table HG but no child record exists in table HO for the same LSACONXB, ALTLCNXB, CAGECDXH & REFNUMHA.",
+        "config": {
+          "sheets": ["HG", "HO"],
+          "joins": [
+            {
+              "left_table": "HG", 
+              "join_type": "a_left",
+              "right_table": "HO",
+              "on_cols": [
+                {"left_column": "cagecdxh", "right_column": "cagecdho"},
+                {"left_column": "refnumha", "right_column": "refnumho"}
+              ]
+            }
+          ],
+          "conditions": []
+        }
       },
       {
         "code": "Q003",
         "name": "H task without replacement spare",
-        "description": "This query identifies where there is a record in table CA with a TASKCDCA starting 'H' but no child record exists in table CI for the same LSACONXB & ALTLCNXB."
+        "description": "This query identifies where there is a record in table CA with a TASKCDCA starting 'H' but no child record exists in table CI for the same LSACONXB & ALTLCNXB.",
+        "config": {
+          "sheets": ["CA", "CI"],
+          "joins": [
+            {
+              "left_table": "CA",
+              "join_type": "a_left",
+              "right_table": "CI",
+              "on_cols": [
+                {"left_column": "lsaconxb", "right_column": "tsklcnci"},
+                {"left_column": "altlcnxb", "right_column": "tskalcci"}
+              ]
+            }
+          ],
+          "conditions": [
+            {"value_2": null, "column": "taskcdca", "operator": "starts_with", "value_1": "H", "logic": "And"}
+          ]
+        }
       },
       {
         "code": "Q004",
         "name": "XB without TXB",
-        "description": "This query identifies where a record exists in table XB but no child record exists in table TXB for the same LSACONXB & ALTLCNXB."
+        "description": "This query identifies where a record exists in table XB but no child record exists in table TXB for the same LSACONXB & ALTLCNXB.",
+        "config": {
+          "sheets": ["XB", "TXB"],
+          "joins": [
+            {
+              "left_table": "XB", 
+              "join_type": "a_left", 
+              "right_table": "TXB", 
+              "on_cols": [
+                {"left_column": "lsaconxb", "right_column": "lsaconxb"}, 
+                {"left_column": "altlcnxb", "right_column": "altlcnxb"}
+              ]
+            }
+          ],
+          "conditions": []
+        }
       },
       {
         "code": "Q005",
         "name": "TXB without TREV STATUS",
-        "description": "This query identifies where a record exists in table TXB but no child record exists in table TREVSTATUS for the same LSACONXB & ALTLCNXB."
+        "description": "This query identifies where a record exists in table TXB but no child record exists in table TREVSTATUS for the same LSACONXB & ALTLCNXB.",
+        "config": {
+          "sheets": ["TXB", "TREV_STATUS"], 
+          "joins": [
+            {
+              "left_table": "TXB", 
+              "join_type": "a_left", 
+              "right_table": "TREV_STATUS", 
+              "on_cols": [
+                {"left_column": "lsaconxb", "right_column": "lsaconxb"}, 
+                {"left_column": "altlcnxb", "right_column": "altlcnxb"}
+              ]
+            }
+          ], 
+          "conditions": []
+        }
       },
       {
         "code": "Q006",
         "name": "CA without TCA",
-        "description": "This query identifies where a record exists in table CA but no child record exists in table CA for the same LSACONXB, ALTLCNXB & TASKCDCA."
+        "description": "This query identifies where a record exists in table CA but no child record exists in table TCA for the same LSACONXB, ALTLCNXB & TASKCDCA."
       },
       {
         "code": "Q007",

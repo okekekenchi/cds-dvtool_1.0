@@ -1,14 +1,14 @@
-# import importlib
-# import sys
+import importlib
+import sys
 
-# def reload_package(package_name: str):
-#     for name in list(sys.modules):
-#         if name == package_name or name.startswith(f"{package_name}."):
-#             importlib.reload(sys.modules[name])
+def reload_package(package_name: str):
+    for name in list(sys.modules):
+        if name == package_name or name.startswith(f"{package_name}."):
+            importlib.reload(sys.modules[name])
 
-# reload_package("components.checklist_view")
-# reload_package("components.checklist_create_form")
-# reload_package("components.checklist_update_form")
+reload_package("components.checklist_view")
+reload_package("components.checklist_create_form")
+reload_package("components.checklist_update_form")
 
 import streamlit as st
 from util.auth_utils import authenticated
@@ -31,6 +31,8 @@ def init_session_var():
         st.session_state.update_checklist = False
     if "create_checklist" not in st.session_state:
         st.session_state.create_checklist = True
+    if "reset_form" not in st.session_state:
+        st.session_state.reset_form = True
         
 @authenticated
 def main():
