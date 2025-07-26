@@ -172,21 +172,21 @@ def selected_sheets_and_columns_are_present_in_file(sheets:dict):
             if join['on_cols']:
                 for on_col in join['on_cols']:
                     if on_col["left_column"] not in columns_across_sheets:
-                        st.badge(f"**{on_col["left_column"]}** column is missing but required by the query", color='orange')
+                        st.badge(f"**{on_col['left_column']}** column is missing but required by the query", color='orange')
                         st.stop()
                     if on_col["right_column"] not in columns_across_sheets:
-                        st.badge(f"**{on_col["right_column"]}** column is missing but required by the query", color='orange')
+                        st.badge(f"**{on_col['right_column']}** column is missing but required by the query", color='orange')
                         st.stop()
     
     if config_db['conditions']:
         for condition in config_db['conditions']:
             if condition['column'] not in columns_across_sheets:
-                st.badge(f"**{condition["column"]}** column is missing but required by the query", color='orange')
+                st.badge(f"**{condition['column']}** column is missing but required by the query", color='orange')
                 st.stop()
                 
     #         if condition['operator'] in ['column_equals','column_not_equals']:
     #             if condition['value_1'] not in columns_across_sheets:
-    #                 st.badge(f"**{condition["value_1"]}** column is missing but required by the query", color='orange')
+    #                 st.badge(f"**{condition['value_1']}** column is missing but required by the query", color='orange')
     #                 st.stop()
             
     #         if condition['operator'] in ['in_list', 'not_in_list']:
