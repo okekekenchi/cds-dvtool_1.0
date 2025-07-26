@@ -26,7 +26,7 @@ def clone_checklist_form():
         st.warning('Record not selected.')
         return
     
-    st.write(f"Clone checklist with code: {st.session_state.selected_checklist.get("code")}")
+    st.write(f"Clone checklist with code: {st.session_state.selected_checklist.get('code')}")
     
     st.text_input("Code *", help="Code must be Unique",
                     key="clone_checklist_code", max_chars=15)
