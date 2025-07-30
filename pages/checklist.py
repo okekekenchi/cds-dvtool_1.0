@@ -12,8 +12,9 @@
 
 import streamlit as st
 from loader.css_loader import load_css
-from util.auth_utils import authenticated
+from database.migration import init_db
 from components.side_nav import side_nav
+from util.auth_utils import authenticated
 from components.checklist_view import checklist_view
 from components.checklist_create_form import checklist_create_form
 from components.checklist_update_form import checklist_update_form
@@ -64,5 +65,7 @@ def main():
     st.write('')
                 
 if __name__ == "__main__":
+    init_db()
+    st.session_state.current_page = "pages/checklist.py"
     main()
     

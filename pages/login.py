@@ -2,6 +2,7 @@ import streamlit as st
 from util.auth_utils import login, guest
 from loader.config_loader import config
 from loader.css_loader import load_css
+from database.migration import init_db
 
 st.set_page_config(page_title="Login", page_icon=":material/key:", layout="centered", initial_sidebar_state="collapsed")
 
@@ -31,6 +32,7 @@ def main():
     """, unsafe_allow_html=True)
             
 if __name__ == "__main__":
+    init_db()
     st.session_state.current_page = config('route.login')
     main()
     

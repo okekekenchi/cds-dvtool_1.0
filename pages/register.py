@@ -4,6 +4,7 @@ import time
 from util.auth_utils import create_user, is_password_strong, email_exists, guest
 from loader.config_loader import config
 from loader.css_loader import load_css
+from database.migration import init_db
 
 st.set_page_config(page_title="Register", page_icon="📝", layout="centered", initial_sidebar_state="collapsed")
 
@@ -62,5 +63,7 @@ def main():
     """, unsafe_allow_html=True)
             
 if __name__ == "__main__":
+    init_db()
+    st.session_state.current_page = config('route.register')
     main()
     
