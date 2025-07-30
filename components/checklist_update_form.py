@@ -1,13 +1,13 @@
-import importlib
-import sys
+# import importlib
+# import sys
 
-def reload_package(package_name: str):
-    for name in list(sys.modules):
-        if name == package_name or name.startswith(f"{package_name}."):
-            importlib.reload(sys.modules[name])
+# def reload_package(package_name: str):
+#     for name in list(sys.modules):
+#         if name == package_name or name.startswith(f"{package_name}."):
+#             importlib.reload(sys.modules[name])
             
-reload_package("components.checklist_configuration")
-reload_package("services.workbook_service")
+# reload_package("components.checklist_configuration")
+# reload_package("services.workbook_service")
 
 import streamlit as st
 from utils import alert
