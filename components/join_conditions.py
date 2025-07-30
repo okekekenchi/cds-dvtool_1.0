@@ -1,5 +1,6 @@
 import streamlit as st
-from util.project_utils import join_types, get_sheet_columns
+from services.workbook_service import get_sheet_columns
+from services.join_service import join_types
 
 @st.dialog("Join Conditions", width='large')
 def join_conditions(sheets:dict, idx:int, join:dict):
@@ -78,6 +79,7 @@ def join_conditions(sheets:dict, idx:int, join:dict):
             with col2:
                 if st.button(f"Delete", key=f"delete_join_condition_{i}", icon=":material/delete:"):
                     del st.session_state.config['joins'][idx]['on_cols'][i]
+                    st.rerun(scope='fragment')
                     
     _, col1, col2 = st.columns([0.6,0.2,0.2])
     with col1:

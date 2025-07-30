@@ -7,7 +7,7 @@ from models.base import BaseModel
 from typing import List, Optional, Union
 from utils import system_tables
 
-
+@st.cache_data
 def get_table_names() -> list:
     """Get list of table names in the database"""
     inspector = inspect(engine)
@@ -86,7 +86,8 @@ def get_table_data(
   # Execute query
   with engine.connect() as conn:
     return pd.read_sql(text(query), conn, params=params)
-
+  
+@st.cache_data
 def get_table_columns(table_name: str) -> list:  
     """
     Get column names a table.
@@ -107,26 +108,26 @@ def delete_record(table_name: str, record_id: int, id_column: str = "id") -> Non
         conn.execute(text(f"DELETE FROM {table_name} WHERE {id_column} = :id"), {"id": record_id})
         conn.commit()
 
-def update_record(table_name: str, record_id: int, data: Dict[str, Any], id_column: str = "id") -> None:
-    """Update a record in a table"""
-    set_clause = ", ".join([f"{k} = :{k}" for k in data.keys()])
-    params = data.copy()
-    params["id"] = record_id
-    with engine.connect() as conn:
-        conn.execute(
-            text(f"UPDATE {table_name} SET {set_clause} WHERE {id_column} = :id"),
-            params
-        )
-        conn.commit()
+# def update_record(table_name: str, record_id: int, data: Dict[str, Any], id_column: str = "id") -> None:
+#     """Update a record in a table"""
+#     set_clause = ", ".join([f"{k} = :{k}" for k in data.keys()])
+#     params = data.copy()
+#     params["id"] = record_id
+#     with engine.connect() as conn:
+#         conn.execute(
+#             text(f"UPDATE {table_name} SET {set_clause} WHERE {id_column} = :id"),
+#             params
+#         )
+#         conn.commit()
 
-def create_record(table_name: str, data: Dict[str, Any]) -> None:
-    """Create a new record in a table"""
-    columns = ", ".join(data.keys())
-    placeholders = ", ".join([f":{k}" for k in data.keys()])
-    with engine.connect() as conn:
-        conn.execute(
-            text(f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"),
-            data
-        )
-        conn.commit()
+# def create_record(table_name: str, data: Dict[str, Any]) -> None:
+#     """Create a new record in a table"""
+#     columns = ", ".join(data.keys())
+#     placeholders = ", ".join([f":{k}" for k in data.keys()])
+#     with engine.connect() as conn:
+#         conn.execute(
+#             text(f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"),
+#             data
+#         )
+#         conn.commit()
         

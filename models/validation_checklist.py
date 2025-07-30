@@ -5,6 +5,7 @@ from models.base import BaseModel
 class ValidationChecklist(BaseModel):
     """Stores validation checklists with configurable tags and settings"""
     __tablename__ = "validation_checklists"
+    extend_existing=True
     
     code = Column(String(20), unique=True, nullable=False, index=True)
     name = Column(String(100), unique=True, nullable=False, index=True)

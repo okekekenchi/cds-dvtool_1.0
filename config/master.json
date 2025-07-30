@@ -112,27 +112,82 @@
       {
         "code": "Q006",
         "name": "CA without TCA",
-        "description": "This query identifies where a record exists in table CA but no child record exists in table TCA for the same LSACONXB, ALTLCNXB & TASKCDCA."
+        "description": "This query identifies where a record exists in table CA but no child record exists in table TCA for the same LSACONXB, ALTLCNXB & TASKCDCA.",
+        "config": {
+          "sheets": ["CA", "TCA"],
+          "joins": [
+            {
+              "left_table": "CA", 
+              "join_type": "a_left",
+              "right_table": "TCA", 
+              "on_cols": [
+                {"left_column": "lsaconxb", "right_column": "lsaconxb"}, 
+                {"left_column": "altlcnxb", "right_column": "altlcnxb"}, 
+                {"left_column": "taskcdca", "right_column": "taskcdca"}
+              ]
+            }
+          ],
+          "conditions": []
+        }
       },
       {
         "code": "Q007",
         "name": "TCA without TSOURCE",
-        "description": "This query identifies where a record exists in table TCA but no child record exists in table TSOURCE for the same LSACONXB, ALTLCNXB & TASKCDCA."
+        "description": "This query identifies where a record exists in table TCA but no child record exists in table TSOURCE for the same LSACONXB, ALTLCNXB & TASKCDCA.",
+        "config": {
+          "sheets": ["TCA", "TSOURCE"],
+          "joins": [
+            {
+              "left_table": "TCA",
+              "join_type": "a_left",
+              "right_table": "TSOURCE",
+              "on_cols": [
+                {"left_column": "lsaconxb", "right_column": "lsaconxb"},
+                {"left_column": "altlcnxb", "right_column": "altlcnxb"},
+                {"left_column": "taskcdca", "right_column": "taskcdca"}
+              ]
+            }
+          ],
+          "conditions": []
+        }
       },
       {
         "code": "Q008",
         "name": "HG without SMRCODHG",
-        "description": "Source Maintenance and Recoverability (SMR) code. 1st & 2nd position Source code. 3rd and 4th position: Maintenance Code. 5th position: Recoverability Code. 6th position: Allocated by individual. This query identifies where a record exists in table HG but the SMRCODHG is not populated."
+        "description": "Source Maintenance and Recoverability (SMR) code. 1st & 2nd position Source code. 3rd and 4th position: Maintenance Code. 5th position: Recoverability Code. 6th position: Allocated by individual. This query identifies where a record exists in table HG but the SMRCODHG is not populated.",
+        "config": {
+          "sheets": ["HG"],
+          "joins": [],
+          "conditions": [
+            {"value_2": null, "column": "smrcodhg", "operator": "is_null", "value_1": null, "logic": "And"}
+          ]
+        }
       },
       {
         "code": "Q009",
         "name": "SMRCODHG - ICC mismatch",
-        "description": "Item Category Code (ICC). This query identifies where a record exists in table HG but the 4th & 5th characters of the SMRCODHG (DED 389) do not align with the ITMCATHG."
+        "description": "Item Category Code (ICC). This query identifies where a record exists in table HG but the 4th & 5th characters of the SMRCODHG (DED 389) do not align with the ITMCATHG.",
+        "config": {
+          "sheets": ["HG"],
+          "joins": [],
+          "conditions": [
+            {"value_2":0,"column":"smrcodhg", "operator":"not_in_list", "value_1":"sheet.HG.itmcathg", "column_char":4, "logic":"And"},
+            {"value_2":0,"column":"smrcodhg", "operator":"not_in_list", "value_1":"sheet.HG.itmcathg", "column_char":5, "logic":"And"}
+          ]
+        }
       },
       {
         "code": "Q010",
         "name": "SMRCODHG - CA mismatch",
-        "description": "This query identifies where a record exists in table CA but the 3rd character of the TASKCDCA i.e. the maintenance level does not align with the 4th & 5th characters of the SMRCODHG."
+        "description": "This query identifies where a record exists in table CA but the 3rd character of the TASKCDCA i.e. the maintenance level does not align with the 4th & 5th characters of the SMRCODHG.",
+        "config": {
+          "sheets": ["CA"],
+          "joins": [],
+          "conditions": [
+            {"value_2":4,"column":"taskcdca","operator":"not_in_list","value_1":"sheet.HG.smrcodhg","column_char":3,"logic":"And"},
+            {"value_2":5,"column":"taskcdca","operator":"not_in_list","value_1":"sheet.HG.smrcodhg","column_char":3,"logic":"And"}
+          ]
+        }
       },
       {
         "code": "Q011",

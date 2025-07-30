@@ -27,4 +27,7 @@ def init_db():
             with get_db() as db:
                 model = get_model_class(table)
                 model.first_or_create(db, find_by="code", **data)
+                
+                # if table == 'validation_checklists':
+                    
     

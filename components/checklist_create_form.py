@@ -1,25 +1,22 @@
-# import importlib
-# import sys
+import importlib
+import sys
 
-# def reload_package(package_name: str):
-#     for name in list(sys.modules):
-#         if name == package_name or name.startswith(f"{package_name}."):
-#             importlib.reload(sys.modules[name])
+def reload_package(package_name: str):
+    for name in list(sys.modules):
+        if name == package_name or name.startswith(f"{package_name}."):
+            importlib.reload(sys.modules[name])
 
-# reload_package("components.select_sheets")
+reload_package("components.checklist_configuration")
+reload_package("services.workbook_service")
 
-import pandas as pd
 import streamlit as st
 from utils import alert
 from models.tag import Tag
 from database.database import get_db
 from sqlalchemy.exc import IntegrityError
-from util.datatable import get_table_names
-from components.join_sheets import join_sheets
-from components.query_builder import build_query
-from components.select_sheets import select_sheets
 from models.validation_checklist import ValidationChecklist
-from util.workbook_utils import load_workbook, load_sheet, load_table, get_file_hash
+from components.checklist_configuration import configure_checklist
+from services.workbook_service import load_data, get_file_hash
 
 checklist = {
     'code': '',
@@ -45,18 +42,10 @@ def init_session_var():
     if 'config' not in st.session_state:
         st.session_state.config = config
     
-    if 'joined_df' not in st.session_state:
-        st.session_state.joined_df = pd.DataFrame()
-    if 'queried_df' not in st.session_state:
-        st.session_state.queried_df = pd.DataFrame()
     if 'list_type' not in st.session_state:
         st.session_state.list_type = None
     if 'list_source_str' not in st.session_state:
         st.session_state.list_source_str = None
-
-def load_tags():
-    with get_db() as db:
-        return Tag.where(db, ["id","name"])
 
 def init_form():
     st.session_state.checklist_code = None
@@ -65,6 +54,10 @@ def init_form():
     st.session_state.checklist_tags = []
     st.session_state.checklist_active = True
 
+def load_tags():
+    with get_db() as db:
+        return Tag.where(db, ["id","name"])
+    
 def form_fields():        
     col11, col12 = st.columns([0.3, 0.7])
     with col11:
@@ -100,23 +93,25 @@ def form_action():
     _, col1, col2 = st.columns([0.5,0.35,0.1], vertical_alignment='center')
     with col1:
         if st.button("Save", key="save_checklist", icon=":material/save:"):
-            error_msg = save_checklist()
-            if error_msg:
-                st.toast(error_msg)
+            save_checklist()
     with col2:
         if st.button("", key="reset_checklist_form", icon=":material/refresh:", help="Reset form"):
             reset_form()
 
 def can_save() -> bool:
+    if not st.session_state.uploaded_file:
+        st.toast("No file uploaded")
+        return False
+        
     if (st.session_state.checklist['code'] and
         st.session_state.checklist['name'] and
         st.session_state.checklist['description']):
         return True
     else:
+        st.toast("Fill all required fields.")
         return False
 
 def save_checklist():
-    error_message = None
     try:
         if can_save():
             created = False
@@ -131,91 +126,52 @@ def save_checklist():
                 created = ValidationChecklist.create(db, **checklist)
             
             if created:
+                st.toast("Record created successfully")
                 reset_form()
             else:
                 alert('Error: Could not create record')
-        else:
-            alert('Fill all required field.')
     except IntegrityError:
-        error_message = f"The 'Code' and 'Name' provided must be unique"
+        st.toast("The 'Code' and 'Name' provided must be unique")
     except Exception as e:
-        error_message = f"Error cloning record: {e}"
+        st.toast(f"Error creating record: {e}")
         
-    return error_message
-
-def get_selected_sheets(all_sheets: dict) -> dict:
-    selected_sheet_names = st.session_state.config['sheets']
-    return { name: all_sheets.get(name) for name in selected_sheet_names }
-
 def reset_form():
-    st.session_state.update({
+    st.session_state.update({ 
         "checklist": checklist,
         "config": config,
-        "joined_df": pd.DataFrame(),
-        "queried_df": pd.DataFrame(),
         "list_type": None,
         "list_source_str": None
     })
     
     st.session_state.reset_form = True
     st.rerun()
-    
-def upload_workbook():    
+
+def upload_workbook():
     st.file_uploader(
         "Select Workbook (Excel File) *",
-        type=["xlsx", "xls"], key="create_file",
+        type=["xlsx", "xls"], key="uploaded_file",
         help="Upload an Excel workbook containing your data sheets.",
     )
     
-    st.markdown("""
-        <style>
-            button { max-width: 150px; }
-        </style>
-    """, unsafe_allow_html=True)
+    st.markdown("<style>button { max-width:150px; }</style>", unsafe_allow_html=True)
     
-    if st.session_state.create_file:
-        current_hash = get_file_hash(st.session_state.create_file)
+    if st.session_state.uploaded_file:
+        current_file_hash = get_file_hash(st.session_state.uploaded_file)
                 
-        if 'workbook_hash' not in st.session_state.checklist:
-            st.session_state.checklist['workbook_hash'] = None
+        if st.session_state.checklist.get("workbook_hash", None) != current_file_hash:
+            file, sheets, tables = load_data(current_file_hash)
             
-        if st.session_state.checklist['workbook_hash'] != current_hash:
-            
-            st.session_state.update({
-                "config": config,
-                "joined_df": pd.DataFrame(),
-                "queried_df": pd.DataFrame(),
+            st.session_state.checklist.update({
+                'workbook': file,
+                'only_sheets': sheets,
+                'sheets': sheets | tables,
+                'workbook_hash': current_file_hash,
+                # "config": config,
                 "list_type": None,
                 "list_source_str": None
             })
-            
-            try:
-                # Load directly from bytes without temp file
-                excel_file = load_workbook(st.session_state.create_file.getvalue(), current_hash)
-                table_names = [name[:-1] for name in get_table_names()]
-                
-                if excel_file.sheet_names:
-                    sheets = { name: load_sheet(excel_file, sheet_name=name) 
-                                for name in excel_file.sheet_names }
-                else: st.warning("Unable to load sheets try again.")
-            except Exception as e:
-                st.error(f"Error processing workbook: {str(e)}")
-                st.stop()
-            
-            if table_names:
-                exempt_tables = ['validation_checklists']
-                tables = { name : load_table(name)
-                            for name in table_names if name not in exempt_tables }
-            else: st.warning("Unable to load master tables contact admin.")
-                
-            st.session_state.checklist.update({
-                'workbook': excel_file,
-                'sheets': sheets | tables,
-                'workbook_hash': current_hash
-            })
         
-    return st.session_state.create_file
-
+    return st.session_state.uploaded_file
     
 def checklist_create_form():
     init_session_var()
@@ -238,35 +194,6 @@ def checklist_create_form():
     
     st.divider()
     
-    if workbook and st.session_state.checklist.get('sheets'):
-        st.markdown("""<h4> Configuration </h4>""", unsafe_allow_html=True)
-        tabs = ["Select Sheets *", "Join Sheets", "Build Query", "View Output"]
-        sheet_tab, join_tab, query_tab, output_tab = st.tabs(tabs, width='stretch')
-        all_sheets = st.session_state.checklist['sheets']
-        selected_sheets = get_selected_sheets(all_sheets)
-        
-        with sheet_tab:
-            select_sheets(st.session_state.checklist['sheets'], selected_sheets)
-        
-        with join_tab:
-            if len(selected_sheets) >= 2:
-                join_sheets(sheets=selected_sheets)
-            else:
-                st.info('You need at least two or more sheets/tables to perform a join.')
-        
-        with query_tab:
-            if len(selected_sheets):
-                build_query(sheets=selected_sheets)
-            else:
-                st.info("Select sheets/tables to begin building queries")
-        
-        with output_tab:
-            if len(selected_sheets):
-                if not st.session_state.queried_df.empty:
-                    st.info(f"{len(st.session_state.queried_df)} record(s) returned by query.")
-                    st.write(st.session_state.queried_df)
-                else:
-                    st.info("No queried result.")
-            else:
-                st.info("No sheets seleted.")
+    if workbook:
+       configure_checklist()
                 

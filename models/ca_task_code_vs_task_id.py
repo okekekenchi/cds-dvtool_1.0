@@ -3,6 +3,7 @@ from models.base import BaseModel
 
 class CaTaskCodeVsTaskId(BaseModel):
     __tablename__ = "ca_task_code_vs_task_ids"
+    extend_existing=True
     
     task_code = Column(String, unique=True, nullable=False)
     desc_1 = Column(String, nullable=False)

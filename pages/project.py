@@ -7,7 +7,7 @@ def reload_package(package_name: str):
             importlib.reload(sys.modules[name])
 
 # 🔁 Reload util and components before importing anything from them
-reload_package("util")
+reload_package("utils")
 reload_package("components")
 
 # Now import everything

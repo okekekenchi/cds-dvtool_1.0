@@ -76,6 +76,7 @@ def clone_checklist_form():
 @st.dialog("Delete Checklist")
 def delete_checklist_form():
     record_id = st.session_state.selected_checklist.get("id")
+    record_code = st.session_state.selected_checklist.get("code")
     
     if not record_id:
         st.warning('Record not selected.')
@@ -85,7 +86,7 @@ def delete_checklist_form():
         st.warning("This is a **system record** - you cannot delete.")
         return
 
-    st.warning(f"Are you sure you want to delete this record: {record_id}?")
+    st.warning(f"Are you sure you want to delete this record: {record_code}?")
     
     col1, _, col2 = st.columns([0.35,0.3,0.35])
     deleted = False
@@ -143,10 +144,12 @@ def handle_selection_change(selected_rows: list[dict]):
         
         if st.session_state.selected_checklist.get('id') != selected_checklist['id']:
             st.session_state.selected_checklist = selected_checklist
-            st.session_state.reset_form = True
+            st.session_state.reset_form = True # Reset form for update
             st.rerun()
     else:
         if st.session_state.selected_checklist != {}:
+            if st.session_state.selected_checklist.get('id'):
+                st.session_state.reset_form = True # Reset form for create
             st.session_state.selected_checklist = {}
             st.rerun()
  

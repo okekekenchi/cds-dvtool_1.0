@@ -1,10 +1,12 @@
-from sqlalchemy import Column, Integer, DateTime, event
+from sqlalchemy import Column, Integer, DateTime, event, text
 from database.database import Base, engine
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 import pytz
 import pandas as pd
 import json
+from typing import List, Union, Optional
+from sqlalchemy.orm import Query
 
 class BaseModel(Base):
   __abstract__ = True
@@ -15,24 +17,166 @@ class BaseModel(Base):
                       onupdate=lambda: datetime.now(pytz.utc))
   
   _default = {}
+  
+  @classmethod
+  def truncate(cls, db, restart_identity=True, cascade=False):
+    """
+    Truncate the table (delete all records) with database-specific optimizations.
+    
+    Args:
+        db: SQLAlchemy session
+        restart_identity: Reset auto-increment counters (where supported)
+        cascade: Include referenced tables (where supported)
+    """
+    table_name = cls.__tablename__
+    
+    try:
+      db.execute(text(f'DELETE FROM {table_name}'))
+      if restart_identity:
+        db.execute(text(f'DELETE FROM sqlite_sequence WHERE name="{table_name}"'))
+      db.commit()
+      return True
+    except Exception as e:
+      db.rollback()
+      raise Exception(f"Truncate failed: {str(e)}")
+
+  @classmethod
+  def clear_all(cls, db):
+    """
+    Safe alternative to truncate that works across all databases.
+    Uses delete() but performs in batches for large tables.
+    """
+    try:
+      # First try the optimized truncate
+      return cls.truncate(db)
+    except:
+      # Fallback to batch deletion if truncate fails
+      try:
+        while db.query(cls).count() > 0:
+            db.query(cls).limit(10000).delete(synchronize_session=False)
+            db.commit()
+        return True
+      except Exception as e:
+        db.rollback()
+        raise Exception(f"Failed to clear table: {str(e)}")
+
 
   @classmethod
   def create(cls, db, **kwargs):
     """Create new record"""
-    merged = {**cls._default, **kwargs}
-    instance = cls(**merged)
+    table_columns = {column.name for column in cls.__table__.columns}
+        
+    # Filter kwargs to only include existing columns
+    filtered_kwargs = {
+        key: value 
+        for key, value in {**cls._default, **kwargs}.items()
+        if key in table_columns
+    }
+    
+    instance = cls(**filtered_kwargs)
     db.add(instance)
     db.commit()
     db.refresh(instance)
     return instance
     
-  @classmethod
-  def all(cls, db, columns=None):
-    """Get all records with selected columns"""
-    if columns is None:
-        columns = [cls]  # Default: All columns
-    return db.query(*columns).all()
+  class BaseModel(Base):
+    __abstract__ = True
     
+    # ... (your existing columns and methods)
+    
+  @classmethod
+  def all(
+      cls,
+      db,
+      columns: Optional[Union[str, List[str]]] = None,
+      as_dict: bool = False,
+      chunk_size: Optional[int] = None
+  ) -> Union[List['BaseModel'], List[dict]]:
+    """
+    Get all records with flexible return formats.
+    
+    Args:
+        db: SQLAlchemy session
+        columns: Either:
+            - None (get all columns)
+            - String of comma-separated column names ('id,name')
+            - List of column names (['id', 'name'])
+        as_dict: If True, returns dictionaries instead of model instances
+        chunk_size: If specified, yields chunks of records
+        
+    Returns:
+        List of model instances, dictionaries, or chunks based on parameters
+    """
+    # Prepare the base query
+    query = db.query(cls)
+    
+    # Handle column selection
+    selected_columns = None
+    if columns is not None:
+        if isinstance(columns, str):
+            columns = [col.strip() for col in columns.split(',') if col.strip()]
+        
+        # Validate columns and get SQLAlchemy column objects
+        selected_columns = []
+        for col_name in columns:
+            if not hasattr(cls, col_name):
+                raise AttributeError(f"Column '{col_name}' doesn't exist on {cls.__name__}")
+            selected_columns.append(getattr(cls, col_name))
+        
+        query = query.with_entities(*selected_columns)
+    
+    # Handle chunking
+    if chunk_size:
+        return cls._yield_in_chunks(query, chunk_size, as_dict, selected_columns)
+    
+    # Execute query and format results
+    results = query.all()
+    
+    if as_dict or selected_columns is not None:
+        column_names = columns if columns else [col.name for col in cls.__table__.columns]
+        return [cls._row_to_dict(row, column_names) for row in results]
+    
+    return results
+
+  @classmethod
+  def _yield_in_chunks(
+      cls, 
+      query: Query, 
+      chunk_size: int, 
+      as_dict: bool,
+      selected_columns: Optional[List] = None
+  ):
+      """Yield results in chunks for memory efficiency"""
+      offset = 0
+      column_names = None
+      
+      if as_dict:
+          column_names = (
+              [col.name for col in cls.__table__.columns] 
+              if selected_columns is None
+              else [col.key for col in selected_columns]
+          )
+      
+      while True:
+          chunk = query.offset(offset).limit(chunk_size).all()
+          if not chunk:
+              break
+          
+          if as_dict:
+              yield [cls._row_to_dict(row, column_names) for row in chunk]
+          else:
+              yield chunk
+          
+          offset += chunk_size
+
+  @staticmethod
+  def _row_to_dict(row, column_names: List[str]) -> dict:
+      """Convert a row result to dictionary"""
+      if hasattr(row, '_asdict'):  # Handle model instances
+          return row._asdict()
+      return dict(zip(column_names, row))  # Handle tuple results
+
+
   @classmethod
   def all_df(cls, db, columns=None):
     """

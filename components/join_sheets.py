@@ -1,10 +1,48 @@
+import importlib
+import sys
+
+def reload_package(package_name: str):
+    for name in list(sys.modules):
+        if name == package_name or name.startswith(f"{package_name}."):
+            importlib.reload(sys.modules[name])
+
+reload_package("services.join_service")
+reload_package("components.join_conditions")
+
+import pandas as pd
 import streamlit as st
 from utils import alert
-from util.project_utils import join_types
+from services.join_service import join_types, print_matching_columns
 from components.join_conditions import join_conditions
-from util.project_utils import print_matching_columns
-import pandas as pd
- 
+
+def show_joined_sheets(sheets: dict):
+    if not st.session_state.config['joins']:
+        st.write("Your join list is empty!")
+    else:
+        for idx, join in enumerate(st.session_state.config['joins']):
+            st.divider()
+            col1, col2 = st.columns([0.8, 0.2])
+            
+            with col1:
+                df = pd.DataFrame([join])
+                if 'on_cols' in df:
+                    df = df.drop(columns=["on_cols"])  # Remove column
+                
+                df['join_type'] = df['join_type'].map(join_types)
+                df.columns = [ f"**{column.replace('_', ' ').capitalize()}**" for column in df.columns]
+                st.table(df)
+            
+            with col2:
+                if st.button("Conditions", key=f"join_conditions_{idx}"):
+                    if join['left_table'] and join['right_table'] and join['join_type']:
+                        join_conditions(sheets, idx, join)
+                    else:
+                        alert("Fill all required fields")
+                
+                if st.button(f"Delete", key=f"delete_join_conditions_{idx}", icon=":material/delete:"):
+                    del st.session_state.config['joins'][idx]
+                    st.rerun()
+
 def join_sheets(sheets: dict):
     """Renders UI for selecting and joining sheets for validation.
     
@@ -59,31 +97,4 @@ def join_sheets(sheets: dict):
     
     print_matching_columns(sheets, new_join)
         
-    if not st.session_state.config['joins']:
-        st.write("Your join list is empty!")
-    else:
-        # View join list
-        for idx, join in enumerate(st.session_state.config['joins']):
-            st.divider()
-            col1, col2 = st.columns([0.8, 0.2])
-            
-            with col1:
-                df = pd.DataFrame([join])
-                if 'on_cols' in df:
-                    df = df.drop(columns=["on_cols"])  # Remove column
-                
-                df['join_type'] = df['join_type'].map(join_types)
-                df.columns = [ f"**{column.replace('_', ' ').capitalize()}**" for column in df.columns]
-                st.table(df)
-            
-            with col2:
-                if st.button("Conditions", key=f"join_conditions_{idx}"):
-                    if join['left_table'] and join['right_table'] and join['join_type']:
-                        join_conditions(sheets, idx, join)
-                    else:
-                        alert("Fill all required fields")
-                
-                if st.button(f"Delete", key=f"delete_join_conditions_{idx}", icon=":material/delete:"):
-                    del st.session_state.config['joins'][idx]
-                    st.rerun()
-
+    show_joined_sheets(sheets)
