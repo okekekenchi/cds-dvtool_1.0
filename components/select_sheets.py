@@ -10,6 +10,22 @@ def clear_sheets():
         }
     })
     
+def delete_sheet(sheet_index:int):
+    """
+    Delete sheet name at the specified index
+    deletes all joins have the sheet name
+
+    Args:
+        sheet_index (int): _description_
+    """
+    sheet_name = st.session_state.config['sheets'][sheet_index]
+    del st.session_state.config['sheets'][sheet_index]
+    
+    joins = st.session_state.config['joins']
+    for idx, join in enumerate(joins):
+        if sheet_name in [join["left_table"], join["right_table"]]:
+            del st.session_state.config['joins'][idx]                            
+    
 @st.dialog('Preview Sheet/Table', width="large")
 def preview_sheet(df):
     st.dataframe(df.head())
@@ -32,7 +48,7 @@ def show_selected_sheets(all_sheets: dict):
                     preview_sheet(all_sheets[sheet])
             with col3:
                 if st.button(f"Delete", key=f"delete_sheet_{i}", icon=":material/delete:"):
-                    del st.session_state.config['sheets'][i]
+                    delete_sheet(sheet_index=i)                            
                     st.rerun()
 
 def select_sheets(all_sheets: dict):
@@ -48,7 +64,7 @@ def select_sheets(all_sheets: dict):
     """
     col1, col2, col3, _ = st.columns([0.5,0.2,0.05, 0.25])
     sheet_options = list(all_sheets.keys())
-    selected_sheets = st.session_state.config.get('sheets')
+    selected_sheets = st.session_state.config.get('sheets', [])
     
     with col1:
         new_sheets = st.multiselect(

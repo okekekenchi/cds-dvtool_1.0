@@ -56,11 +56,12 @@
           "joins": [
             {
               "left_table": "CA",
-              "join_type": "a_left",
+              "join_type": "inner",
               "right_table": "CI",
               "on_cols": [
                 {"left_column": "lsaconxb", "right_column": "tsklcnci"},
-                {"left_column": "altlcnxb", "right_column": "tskalcci"}
+                {"left_column": "altlcnxb", "right_column": "tskalcci"},
+                {"left_column": "taskcdca", "right_column": "tsktcdci"}
               ]
             }
           ],

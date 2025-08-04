@@ -53,11 +53,10 @@ def get_file_hash(uploaded_file):
     """
     Generate hash for file content to detect changes
     """
-    # st.write(uploaded_file)
-    if uploaded_file:
+    try:
         return hashlib.md5(uploaded_file.getvalue()).hexdigest()
-    else:
-        return None
+    except Exception as e:
+        st.warning("Reload page to continue.")
 
 def get_sheet_columns(sheets:dict, sheet_name: str):
     if sheet_name in sheets:

@@ -18,7 +18,9 @@ operators = {
     'in_list': 'In list',
     'not_in_list': 'Not in list',
     'merge': 'Merge',
-    'split': 'Split'
+    'split': 'Split',
+    'wildcard_match': 'Like',
+    'wildcard_not_match': 'Not Like'
 }
 
 operator_map = {
@@ -35,6 +37,8 @@ operator_map = {
     'ends_with': 'endswith',
     'is_null': 'isna',
     'not_null': 'notna',
+    'wildcard_match': 'str.match',
+    'wildcard_not_match': 'str.match'
 }
 
 # def clear_sheets():

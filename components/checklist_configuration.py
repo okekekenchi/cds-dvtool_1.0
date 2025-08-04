@@ -1,14 +1,15 @@
-# import importlib
-# import sys
+import importlib
+import sys
 
-# def reload_package(package_name: str):
-#     for name in list(sys.modules):
-#         if name == package_name or name.startswith(f"{package_name}."):
-#             importlib.reload(sys.modules[name])
+def reload_package(package_name: str):
+    for name in list(sys.modules):
+        if name == package_name or name.startswith(f"{package_name}."):
+            importlib.reload(sys.modules[name])
 
-# reload_package("components.select_sheets")
-# reload_package("components.join_sheets")
-# reload_package("components.query_builder")
+reload_package("services.join_service")
+reload_package("components.select_sheets")
+reload_package("components.join_sheets")
+reload_package("components.query_builder")
 
 import streamlit as st
 from components.join_sheets import join_sheets
@@ -56,13 +57,14 @@ def configure_checklist():
                 join_sheets(sheets=selected_sheets)
             else:
                 st.info('You need at least two or more sheets/tables to perform a join.')
-        
-        with query_tab:
+                
             if len(selected_sheets):
                 joined_df = get_joined_sheets(
                                 sheets=selected_sheets,
                                 join_conditions=st.session_state.config['joins']
                             )
+        with query_tab:
+            if len(selected_sheets):
                 build_query(
                     all_sheets=st.session_state.checklist['sheets'],
                     joined_df=joined_df
@@ -86,4 +88,3 @@ def configure_checklist():
                     st.info("No queried result.")
             else:
                 st.info("No sheets seleted.")
-                

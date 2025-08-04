@@ -100,13 +100,14 @@ def perform_joins(sheets: dict,  joins: list[dict]) -> pd.DataFrame:
             
         return left_df, right_df
     
-    result = pd.DataFrame
+    result = pd.DataFrame()
+    suffix_separator = "_"
     
     for i, join in enumerate(joins):
         # Validate join specification
         required_keys = {'left_table', 'right_table', 'join_type', 'on_cols'}
         if not all(k in join for k in required_keys):
-            st.error(f"Missing required fields in join specification")
+            st.warning(f"Missing required join specification(s) in **row {i+1}**")
             return pd.DataFrame()
         
         on_cols = join['on_cols']
@@ -114,16 +115,16 @@ def perform_joins(sheets: dict,  joins: list[dict]) -> pd.DataFrame:
         left_table = join['left_table']
         right_table = join['right_table']
         is_anti_join = join_type[:2] == "a_"
-
-        if not len(on_cols):
-            st.error(f"Missing required conditions in join specification")
-            return pd.DataFrame
         
-        left_df = result if not result.empty and left_table == getattr(result, 'name', None) else sheets.get(left_table)
+        if not len(on_cols):
+            st.warning(f"Missing required join specification(s) in **row {i+1}**")
+            return pd.DataFrame()
+        
+        left_df = result if not result.empty else sheets.get(left_table)
         right_df = sheets.get(right_table)
         
         if left_df is None or right_df is None:
-            st.error(f"Missing table: {left_table if left_df is None else right_table}")
+            st.error(f"Missing sheet/table: {left_table if left_df is None else right_table}")
             return pd.DataFrame()
         
         left_on = []
@@ -146,19 +147,32 @@ def perform_joins(sheets: dict,  joins: list[dict]) -> pd.DataFrame:
             left_df, right_df = convert_column_types(left_df, right_df, col["left_column"], col["right_column"])
             if left_df is None or right_df is None:
                     return pd.DataFrame()
-                
-        if len(right_on) >= 2:
-            cleaned_right_df = right_df[[right_on[0], right_on[1]]].drop_duplicates()
-        else:
-            # Handle the case where there's only 1 column
-            cleaned_right_df = right_df[[right_on[0]]].drop_duplicates()
+        
+        right_suffix = f"{suffix_separator}{join['right_table']}"
+
+        # Check for conflicts with existing columns
+        right_columns = set(right_df.columns) - set(col['right_column'] for col in join['on_cols'])
+
+        # Resolve conflicts by appending right_suffix
+        rename_cols = {
+            col: f"{col}{right_suffix}" 
+            for col in right_columns 
+            if col in set(left_df.columns)
+        }
+        
+        if rename_cols:
+            st.write(f"\n**Column Conflicts Renamed:** `{rename_cols}`")
+        
+        # Apply renaming to right_df (ONLY to non-join columns)
+        right_df_renamed = right_df.rename(columns=rename_cols)
         
         if left_on and right_on:
             try:
-                result = pd.merge(left_df, cleaned_right_df,
+                result = pd.merge(left_df, right_df_renamed,
                                 left_on=left_on, right_on=right_on,
                                 how=(join_type).replace("a_", ""),
-                                indicator=is_anti_join
+                                indicator=is_anti_join,
+                                suffixes=("", f"{suffix_separator}{right_table}")
                                 )
                 
                 if is_anti_join:

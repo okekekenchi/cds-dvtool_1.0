@@ -1,13 +1,13 @@
-# import importlib
-# import sys
+import importlib
+import sys
 
-# def reload_package(package_name: str):
-#     for name in list(sys.modules):
-#         if name == package_name or name.startswith(f"{package_name}."):
-#             importlib.reload(sys.modules[name])
+def reload_package(package_name: str):
+    for name in list(sys.modules):
+        if name == package_name or name.startswith(f"{package_name}."):
+            importlib.reload(sys.modules[name])
             
-# reload_package("components.checklist_configuration")
-# reload_package("services.workbook_service")
+reload_package("components.checklist_configuration")
+reload_package("services.workbook_service")
 
 import streamlit as st
 from utils import alert
@@ -167,8 +167,8 @@ def selected_sheets_and_columns_are_present_in_file(sheets:dict):
     
     if config_db['conditions']:
         for condition in config_db['conditions']:
-            if condition['column'] not in columns_across_sheets:
-                st.badge(f"**{condition['column']}** column is missing but required by the query", color='orange')
+            if condition.get('column') and condition.get('column') not in columns_across_sheets:
+                st.badge(f"**{condition.get('column')}** column is missing but required by the query", color='orange')
                 st.stop()
                 
     #         if condition['operator'] in ['column_equals','column_not_equals']:
@@ -187,7 +187,6 @@ def selected_sheets_and_columns_are_present_in_file(sheets:dict):
     #                     st.badge(f"**{sheet}** sheet is missing but required by the query", color='orange')
     #                     st.stop()
     return True
-
 
 def upload_workbook():
     st.file_uploader(
@@ -231,13 +230,13 @@ def checklist_update_form():
         st.session_state.reset_form = False
         
     col1, col2 = st.columns([0.5, 0.5], border=True)
-        
+    
     with col1:
         form_fields()
         
     with col2:
         form_action()
-            
+        
         st.divider()
         
         workbook = upload_workbook()

@@ -41,9 +41,9 @@ def main():
     st.session_state.current_page = "pages/checklist.py"
     side_nav()
     init_session_var()
-    
-    st.write('')
-    st.write('')
+            
+    if st.button("Refresh", icon=":material/refresh:"):
+        st.rerun()
     
     if st.session_state.selected_checklist.get('id'):
         st.session_state.tabs = ["View", "Update Checklist"]

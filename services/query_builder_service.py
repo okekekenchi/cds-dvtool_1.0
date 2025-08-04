@@ -96,31 +96,120 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str:
             Used to infer column data types.
         condition: A dictionary defining the filter condition. Expected keys:
             - 'column': str, The name of the column to filter.
+            - 'column_char': int, The position of a character in column value
             - 'operator': str, The type of comparison (e.g., 'equals', 'contains', 'between').
             - 'value_1': str or numeric, The primary value for the comparison.
-            - 'value_2': str or numeric, optional, A secondary value for operators like 'between' or positional 'contains'.
+            - 'value_2': str or numeric, optional, A secondary value for operators like 'between' or positional 'contains, in list, column_equls'.
             
     Returns:
         A string representing the pandas query condition, or an empty string if
         the condition cannot be built (e.g., invalid operator, missing value for non-null check).
     """
     column = condition['column']
+    column_char = condition.get('column_char', 0)
     operator = condition['operator']
     value = condition['value_1']
     value_2 = condition.get('value_2', None)
     
+    if column not in df:
+        st.warning(f"Column {column} does not exist.")
+        return ""
+    
     try:
-        column_char = int(condition['column_char']) if 'column_char' in condition else None
+        column_char = int(column_char)
     except (ValueError, TypeError):
-        column_char = None  
+        column_char = 0
     
     if operator in ['is_null', 'not_null']:
         return f"`{column}`.{operator_map[operator]}()"
     
     elif operator in ['column_equals','column_not_equals']:
-        return f"`{column}` {operator_map[operator]} `{condition['value_1']}`" if value is not None else ""
+        if value is None: return ""
+        
+        # Get the target column to compare with
+        target_column = condition['value_1']
+        if target_column not in df:
+            st.warning(f"Column {target_column} does not exist.")
+            return ""
+        
+        # Check if we're doing character position comparison
+        column_char_pos = condition.get('column_char', 0)
+        target_char_pos = condition.get('value_2', 0)
+        
+        try:
+            column_char_pos = int(column_char_pos) if column_char_pos not in [None, ''] else 0
+            target_char_pos = int(target_char_pos) if target_char_pos not in [None, ''] else 0
+        except ValueError:
+            st.warning("Character positions must be integers")
+            return ""
+        
+        # Case 1: Both character positions specified
+        if column_char_pos > 0 and target_char_pos > 0:
+            not_operator = '~' if operator == 'column_not_equals' else ''
+            return (
+                f"{not_operator}(`{column}`.notna() & "
+                f"`{target_column}`.notna() & "
+                f"`{column}`.str.len() >= {column_char_pos} & "
+                f"`{target_column}`.str.len() >= {target_char_pos} & "
+                f"`{column}`.str[{column_char_pos-1}] == "
+                f"`{target_column}`.str[{target_char_pos-1}])"
+            )
+        
+        # Case 2: Only first column's character position specified
+        elif column_char_pos > 0:
+            not_operator = '~' if operator == 'column_not_equals' else ''
+            return (
+                f"{not_operator}(`{column}`.notna() & "
+                f"`{target_column}`.notna() & "
+                f"`{column}`.str.len() >= {column_char_pos} & "
+                f"`{column}`.str[{column_char_pos-1}] == "
+                f"`{target_column}`)"
+            )
+        
+        # Case 3: Only second column's character position specified
+        elif target_char_pos > 0:
+            not_operator = '~' if operator == 'column_not_equals' else ''
+            return (
+                f"{not_operator}(`{column}`.notna() & "
+                f"`{target_column}`.notna() & "
+                f"`{target_column}`.str.len() >= {target_char_pos} & "
+                f"`{column}` == "
+                f"`{target_column}`.str[{target_char_pos-1}])"
+            )
+        
+        # Default: full column comparison
+        not_operator = '~' if operator == 'column_not_equals' else ''
+        return f"{not_operator}`{column}`.eq(`{target_column}`)"
     
-    
+    elif operator in ['wildcard_match', 'wildcard_not_match']:
+        if value is None:
+            st.warning("You haven't specified a wildcard for a query condition.")
+            return ""
+        
+        # Convert user-friendly wildcards to regex
+        pattern = (
+            str(value)
+            .replace('*', '.*')  # * becomes .* (any characters)
+            .replace('?', '.')    # ? becomes . (single character)
+        )
+        
+        # Handle position-specific checks
+        if value_2:
+            try:
+                char_pos = int(value_2) - 1
+                if char_pos < 0:
+                    st.warning("Character position must be greater than Zero")
+                    return ""
+                else:
+                    pattern = f'^.{{{char_pos}}}{pattern}' # Create position-specific pattern
+            except ValueError:
+                st.warning(f"Invalid character position: {value_2}")
+                return ""
+        
+        # Build the regex condition
+        not_operator = '~' if operator == 'wildcard_not_match' else ''
+        return f"{not_operator}`{column}`.str.match('^{pattern}$', case=False, na=False)"
+        
     # --- Pre-process values based on column data type ---
     if pd.api.types.is_numeric_dtype(df[column]) and operator not in ['in_list', 'not_in_list']:
         try:
@@ -162,20 +251,21 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str:
                     st.warning(f"Position cannot be negative for 'contains' operator on column '{column}'.")
                     return ""
                 
-                pos = pos - 1
-                
-                if operator == 'contains':
-                    return (
-                        f"`{column}`.notna() & "  # Must not be NA
-                        f"`{column}`.str.len() > {pos} & " # Must be long enough
-                        f"`{column}`.str.slice({pos}, {pos + search_len}).eq({value})" # Slice equals search value
-                    )
-                else:
-                    return (
-                        f"~(`{column}`.isna() | "
-                        f"`{column}`.str.len() <= {pos} and "
-                        f"`{column}`.str.slice({pos}, {pos + search_len}).eq({value}))"
-                    )
+                if pos > 0:
+                    pos = pos - 1
+                    
+                    if operator == 'contains':
+                        return (
+                            f"`{column}`.notna() & "  # Must not be NA
+                            f"`{column}`.str.len() > {pos} & " # Must be long enough
+                            f"`{column}`.str.slice({pos}, {pos + search_len}).eq({value})" # Slice equals search value
+                        )
+                    else:
+                        return (
+                            f"~(`{column}`.isna() | "
+                            f"`{column}`.str.len() <= {pos} and "
+                            f"`{column}`.str.slice({pos}, {pos + search_len}).eq({value}))"
+                        )
                 
             except ValueError:
                 st.warning(f"Invalid position '{value_2}' for 'contains' operator on column '{column}'.")
@@ -238,35 +328,38 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str:
 
 def apply_column_operation(df: pd.DataFrame, condition: dict) -> pd.DataFrame:
     """
-    Apply column operations like merge and split to column
+    Apply column operations like merge and split to column.
 
     Args:
-        df (pd.DataFrame): Joined Dataframes
-        condition (dict): query conditions
+        df (pd.DataFrame): The DataFrame to operate on.
+        condition (dict): A dictionary containing column operation details.
+                          Expected keys: 'column', 'operator', 'value_1', 'value_2'.
 
     Returns:
-        pd.DataFrame: 
+        pd.DataFrame: The DataFrame after applying the operation.
     """
+    df_copy = df.copy()
     column = condition['column']
     operator = condition['operator']
     value = condition['value_1']
     value_2 = condition.get('value_2', None)
     
     if operator == 'merge':
-        if value not in df.columns:
+        if value not in df_copy.columns:
             st.warning(f"Column '{value}' not found for merge operation.")
-            return df
+            return df_copy
         if not value_2 or not isinstance(value_2, str):
             st.warning("Please provide a valid column name for the merged result.")
-            return df
+            return df_copy
         
-        df[value_2] = df[column].astype(str) + df[value].astype(str)
+        df_copy[value_2] = df_copy[column].astype(str) + df_copy[value].astype(str)
     
     elif operator == 'split':
         if value is None or value == '':
             st.warning("Delimiter cannot be empty for split operation.")
-            return df
+            return df_copy
         
+        delimiter = str(value)
         # Handle value_2 as comma-separated column names
         split_cols = None
         if value_2 and isinstance(value_2, str):
@@ -275,12 +368,11 @@ def apply_column_operation(df: pd.DataFrame, condition: dict) -> pd.DataFrame:
             split_cols = value_2
         
         # Perform the split
-        split_df = df[column].str.split(repr(str(value)), expand=True)
+        split_df = df_copy[column].str.split(delimiter, expand=True)
         
         if split_cols:
             if len(split_cols) == split_df.shape[1]:
                 split_df.columns = split_cols
-                df = pd.concat([df, split_df], axis=1)
             else:
                 st.warning(
                     f"Number of split columns ({split_df.shape[1]}) doesn't match "
@@ -288,48 +380,84 @@ def apply_column_operation(df: pd.DataFrame, condition: dict) -> pd.DataFrame:
                 )
                 # Add split columns with default names if counts don't match
                 split_df.columns = [f"{column}_{i+1}" for i in range(split_df.shape[1])]
-                df = pd.concat([df, split_df], axis=1)
+            df_copy = pd.concat([df_copy, split_df], axis=1)
         else:
             # If no column names provided, store as list in original column
-            df[column] = df[column].str.split(repr(str(value)))
-                
-    return df
+            df_copy[column] = df_copy[column].str.split(delimiter)
+            
+    return df_copy
 
-def execute_query(all_sheets: dict, joined_df: pd.DataFrame, conditions:dict) -> pd.DataFrame:
+def get_op(op_str: str) -> str:
+    """Helper to get standardized query operators."""
+    if op_str.lower() == 'and':
+        return ' & '
+    elif op_str.lower() == 'or':
+        return ' | '
+    return ' '
+
+def execute_query(all_sheets: dict, joined_df: pd.DataFrame, conditions: dict) -> pd.DataFrame:
     """
-    Execute validation queries
-
-    Args:
-        sheets (pd.DataFrame): all sheets uploaded
-        joined_df (pd.DataFrame): jioned dataframes
-        conditions (dict): query conditions
-
-    Returns:
-        pd.DataFrame: 
+    Rock-solid query execution that handles:
+    - Complex string matching
+    - Nested logical conditions
+    - Position-specific wildcards
+    - Mixed AND/OR logic
     """
-    if not conditions or joined_df.empty: return joined_df
+    if joined_df.empty:
+        return joined_df
     
     try:
-        query_parts = []
+        # Initialize a boolean mask
+        final_mask = pd.Series(True, index=joined_df.index)
+        current_mask = pd.Series(True, index=joined_df.index)
+        current_logic = 'AND'  # Default to AND logic
+        
         for cond in conditions:
-            if cond['operator'] in ['merge', 'split']:
-                joined_df = apply_column_operation(joined_df, cond) 
-            else:
-                condition_str = build_condition(all_sheets, joined_df, cond)
-                if condition_str:  # Skip empty conditions
-                    query_parts.append(condition_str)
+            # Handle column operations
+            if cond.get('operator') in ['merge', 'split']:
+                joined_df = apply_column_operation(joined_df, cond)
+                continue
+            
+            # Handle logic changes
+            if 'nested_logic' in cond:
+                # Apply current group with its logic
+                if current_logic == 'AND':
+                    final_mask &= current_mask
+                else:
+                    final_mask |= current_mask
+                
+                # Reset for new group
+                current_mask = pd.Series(True, index=joined_df.index)
+                current_logic = cond['nested_logic']
+                continue
+            
+            # Build and apply condition
+            condition_str = build_condition(all_sheets, joined_df, cond)
+            if not condition_str:
+                continue
+            
+            try:
+                # Safely evaluate the condition
+                cond_mask = joined_df.eval(condition_str, engine='python')
+                
+                # Apply with current logic
+                if 'logic' in cond and cond['logic'].upper() == 'OR':
+                    current_mask |= cond_mask
+                else:
+                    current_mask &= cond_mask
                     
-                    # Add the logic operator (And/Or) if it exists and there are more conditions
-                    if 'logic' in cond and query_parts:
-                        logic_op = ' & ' if cond['logic'].lower() == 'and' else ' | '
-                        query_parts.append(logic_op)
+            except Exception as e:
+                st.error(f"Condition failed: {condition_str}\nError: {str(e)}")
+                continue
         
-        # Join all parts and remove trailing operators
-        query_str = ''.join(query_parts).rstrip(' &|')
+        # Apply the final group
+        if current_logic == 'AND':
+            final_mask &= current_mask
+        else:
+            final_mask |= current_mask
         
-        return joined_df.query(query_str) if query_str else joined_df
+        return joined_df[final_mask]
     
     except Exception as e:
-        st.write(e)
-        st.error(f"Query failed: {str(e)}")
+        st.error(f"Critical failure: {str(e)}")
         return joined_df

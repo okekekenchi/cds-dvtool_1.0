@@ -150,7 +150,8 @@ def handle_selection_change(selected_rows: list[dict]):
         if st.session_state.selected_checklist != {}:
             if st.session_state.selected_checklist.get('id'):
                 st.session_state.reset_form = True # Reset form for create
-            st.session_state.selected_checklist = {}
+                st.session_state.config = {}
+                st.session_state.selected_checklist = {}
             st.rerun()
  
 def checklist_view():
