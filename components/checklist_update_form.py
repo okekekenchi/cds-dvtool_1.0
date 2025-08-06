@@ -21,6 +21,7 @@ from services.workbook_service import load_data, get_file_hash
 config = {
     'sheets': [],
     'joins': [],
+    'col_operations': [],
     'conditions': []
 }
 
@@ -218,7 +219,7 @@ def upload_workbook():
                 "list_source_str": None
             })
     else:            
-        st.badge("Select file to continue", color='orange')
+        st.warning("Select file to continue")
         
     return st.session_state.uploaded_file
 

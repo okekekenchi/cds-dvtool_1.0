@@ -23,11 +23,15 @@ def on_list_type_changed():
     
 def remove_condition(index):
     """Remove a condition from the list"""
-    st.session_state.config['conditions'].pop(index)
+    try:
+        st.session_state.config['conditions'].pop(index)
+    except Exception as e:
+        st.toast('All cleared')
 
 def clear_conditions():
     """Reset all conditions"""
-    st.session_state.config['conditions'] = []
+    if 'conditions' in st.session_state.config:
+        st.session_state.config['conditions'] = []
     
 @st.dialog('List')
 def preview_list_from_selected_source(all_sheets: dict):
@@ -113,26 +117,27 @@ def build_query(all_sheets: dict, joined_df: pd.DataFrame) -> pd.DataFrame:
                                         key="new_operator",
                                         format_func=lambda x: operators[x])
     with col3:
-        if new['operator'] in ['is_null', 'not_null']:
+        if new['operator'] in ['is_null', 'not_null', 'is_parent', 'is_child']:
             new['value_1'] = None
             new['value_2'] = None
             value_1_is_required = False
         
-        elif new['operator'] in ['column_equals', 'column_not_equals', 'merge']:
-            new['value_1'] = st.selectbox("Column *", key="new_matching_column",
-                                            options=([] if joined_df.empty else joined_df.columns))
-            if new['operator'] == 'merge':
-                new['value_2'] = st.text_input("Column name *", key="merged_column_name")
+        elif new['operator'] in ['distinct_combinations','non_distinct_combinations','length_equals','length_not_equals']:
+            new['value_1'] = st.selectbox("Column *", key="new_matching_column", options=options)
+            new['value_2'] = None
+        
+        elif new['operator'] in ['column_equals', 'column_not_equals']:
+            new['value_1'] = st.selectbox("Column *", key="new_matching_column", options=options)
+           
+            with character_placeholder.container():
+                new['column_char'] = st.number_input("Character", key="nv_char", min_value=0,
+                                                    step=1, max_value=100,
+                                                    help="Optional: Check at specific character position")
+            if new['column_char']:
+                new['value_2'] = st.number_input("Character", key="nv_list_character", min_value=0,
+                                                step=1, max_value=100)
             else:
-                with character_placeholder.container():
-                    new['column_char'] = st.number_input("Character", key="nv_char", min_value=0,
-                                                        step=1, max_value=100,
-                                                        help="Optional: Check at specific character position")
-                if new['column_char']:
-                    new['value_2'] = st.number_input("Character", key="nv_list_character", min_value=0,
-                                                    step=1, max_value=100)
-                else:
-                    new['value_2'] = None
+                new['value_2'] = None
                    
         elif new['operator'] in ['in_list', 'not_in_list']:
             list_type = st.selectbox("List type *",
@@ -164,11 +169,6 @@ def build_query(all_sheets: dict, joined_df: pd.DataFrame) -> pd.DataFrame:
             #                                     step=1, min_value=0, max_value=100)
             new['value_2'] = None
             
-        elif new['operator'] == "split":
-            new['value_1'] = st.text_input("Delimiter *", key="split_delimiter_input")
-            new['value_2'] = st.text_input("Column Names *", key="split_Column_names",
-                                                help="Separated by comma, specify the column names")
-                
         elif new['operator'] == 'between':
             new['value_1'] = st.text_input("From value *", key="from_between_input")
             new['value_2'] = st.text_input("To value *", key="to_between_input")

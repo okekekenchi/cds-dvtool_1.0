@@ -1,10 +1,10 @@
-# import importlib
-# import sys
+import importlib
+import sys
 
-# def reload_package(package_name: str):
-#     for name in list(sys.modules):
-#         if name == package_name or name.startswith(f"{package_name}."):
-#             importlib.reload(sys.modules[name])
+def reload_package(package_name: str):
+    for name in list(sys.modules):
+        if name == package_name or name.startswith(f"{package_name}."):
+            importlib.reload(sys.modules[name])
 
 # reload_package("components.checklist_view")
 # reload_package("components.checklist_create_form")
@@ -41,9 +41,6 @@ def main():
     st.session_state.current_page = "pages/checklist.py"
     side_nav()
     init_session_var()
-            
-    if st.button("Refresh", icon=":material/refresh:"):
-        st.rerun()
     
     if st.session_state.selected_checklist.get('id'):
         st.session_state.tabs = ["View", "Update Checklist"]

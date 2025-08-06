@@ -24,6 +24,7 @@
               ]
             }
           ],
+          "col_operations": [],
           "conditions": []
         }
       },
@@ -44,6 +45,7 @@
               ]
             }
           ],
+          "col_operations": [],
           "conditions": []
         }
       },
@@ -65,6 +67,7 @@
               ]
             }
           ],
+          "col_operations": [],
           "conditions": [
             {"value_2": null, "column": "taskcdca", "operator": "starts_with", "value_1": "H", "logic": "And"}
           ]
@@ -87,6 +90,7 @@
               ]
             }
           ],
+          "col_operations": [],
           "conditions": []
         }
       },
@@ -106,7 +110,8 @@
                 {"left_column": "altlcnxb", "right_column": "altlcnxb"}
               ]
             }
-          ], 
+          ],
+          "col_operations": [],
           "conditions": []
         }
       },
@@ -128,6 +133,7 @@
               ]
             }
           ],
+          "col_operations": [],
           "conditions": []
         }
       },
@@ -149,6 +155,7 @@
               ]
             }
           ],
+          "col_operations": [],
           "conditions": []
         }
       },
@@ -159,6 +166,7 @@
         "config": {
           "sheets": ["HG"],
           "joins": [],
+          "col_operations": [],
           "conditions": [
             {"value_2": null, "column": "smrcodhg", "operator": "is_null", "value_1": null, "logic": "And"}
           ]
@@ -171,6 +179,7 @@
         "config": {
           "sheets": ["HG"],
           "joins": [],
+          "col_operations": [],
           "conditions": [
             {"value_2":0,"column":"smrcodhg", "operator":"not_in_list", "value_1":"sheet.HG.itmcathg", "column_char":4, "logic":"And"},
             {"value_2":0,"column":"smrcodhg", "operator":"not_in_list", "value_1":"sheet.HG.itmcathg", "column_char":5, "logic":"And"}
@@ -184,6 +193,7 @@
         "config": {
           "sheets": ["CA"],
           "joins": [],
+          "col_operations": [],
           "conditions": [
             {"value_2":4,"column":"taskcdca","operator":"not_in_list","value_1":"sheet.HG.smrcodhg","column_char":3,"logic":"And"},
             {"value_2":5,"column":"taskcdca","operator":"not_in_list","value_1":"sheet.HG.smrcodhg","column_char":3,"logic":"And"}
@@ -303,25 +313,25 @@
   "ca_task_code_vs_task_id": {
     "label": "CA -Task code vs Task ID",
     "data": [
-      { "task_code": "0", "desc_1": "UPDATE*", "desc_2": "UPDATE*"},
-      { "task_code": "1", "desc_1": "FUNCTION*", "desc_2": "FUNCTION*"},
-      { "task_code": "4", "desc_1": "LOAD*", "desc_2": "LOAD*"},
-      { "task_code": "5", "desc_1": "SET UP*", "desc_2": "SET UP*"},
-      { "task_code": "7", "desc_1": "ISOLATE*", "desc_2": "ISOLATE*"},
-      { "task_code": "A", "desc_1": "INSP", "desc_2": "INSPECT*"},
-      { "task_code": "B", "desc_1": "TEST*", "desc_2": "TEST*"},
-      { "task_code": "C", "desc_1": "SERVICE*", "desc_2": "SERVICE*"},
-      { "task_code": "D", "desc_1": "ADJUST*", "desc_2": "CHECK/ADJUST*"},
-      { "task_code": "F", "desc_1": "CALIBRATE*", "desc_2": "CALIBRATE*"},
-      { "task_code": "G", "desc_1": "Fit*", "desc_2": "INSTALL*"},
-      { "task_code": "H", "desc_1": "REPLACE*", "desc_2": "REPLACE*"},
-      { "task_code": "J", "desc_1": "REPAIR*", "desc_2": "RPR*"},
-      { "task_code": "N", "desc_1": "FAULT*", "desc_2": "FAULT*"},
-      { "task_code": "O", "desc_1": "OPERATE*", "desc_2": "OPERATE*"},
-      { "task_code": "P", "desc_1": "LUBRICATE*", "desc_2": "LUBRICATE*"},
-      { "task_code": "Q", "desc_1": "CLEAN*", "desc_2": "CLEAN*"},
-      { "task_code": "R", "desc_1": "REMOVE*", "desc_2": "REMOVE*"},
-      { "task_code": "W", "desc_1": "OPEN*", "desc_2": "OPEN*"}
+      { "task_code": "0", "description": "UPDATE*" },
+      { "task_code": "1", "description": "FUNCTION*" },
+      { "task_code": "4", "description": "LOAD*" },
+      { "task_code": "5", "description": "SET UP*" },
+      { "task_code": "7", "description": "ISOLATE*" },
+      { "task_code": "A", "description": "INSP*, INSPECT*" },
+      { "task_code": "B", "description": "TEST*" },
+      { "task_code": "C", "description": "SERVICE*" },
+      { "task_code": "D", "description": "ADJUST*, CHECK/ADJUST*" },
+      { "task_code": "F", "description": "CALIBRATE*" },
+      { "task_code": "G", "description": "Fit*, INSTALL*" },
+      { "task_code": "H", "description": "REPLACE*" },
+      { "task_code": "J", "description": "REPAIR*, RPR*" },
+      { "task_code": "N", "description": "FAULT*" },
+      { "task_code": "O", "description": "OPERATE*" },
+      { "task_code": "P", "description": "LUBRICATE*" },
+      { "task_code": "Q", "description": "CLEAN*" },
+      { "task_code": "R", "description": "REMOVE*" },
+      { "task_code": "W", "description": "OPEN*" }
     ]
   },
   "ca_task_code_interval": {
@@ -367,21 +377,6 @@
       { "task_type_id": "1", "meas_base": "W", "mb_desc": "Weeks"},
       { "task_type_id": "2", "meas_base": "X", "mb_desc": "Sorties"},
       { "task_type_id": "2", "meas_base": "Y", "mb_desc": "Windings"}
-    ]
-  },
-  "hg_smr_vs_icc": {
-    "label": "HG - SMR vs ICC",
-    "data": [
-      { "smrcodhg": "Like \"*Z?\"", "itmcathg": "Fails val if \"X\"" },
-      { "smrcodhg": "Not Like \"*Z?\" and <> \"XB\"", "itmcathg": "Fails val if \"Y\"" },
-      { "smrcodhg": "\"XA\" or \"XC\"", "itmcathg": "Fails val if  <> Null" }
-    ]
-  },
-  "ca_task_code_vs_hg_smr_code": {
-    "label": "CA - Task Code vs HG - SMR Code",
-    "data": [
-      { "taskcdca": "Like \"H\" and not like \"H?O*\"", "smrcodhg": "Like \"??O*\"" },
-      { "taskcdca": "Like \"H?O*\"", "smrcodhg": "Like \"P\" and Not Like \"??O*\"" }
     ]
   }
 }

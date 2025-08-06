@@ -8,6 +8,7 @@ def reload_package(package_name: str):
 
 reload_package("services.join_service")
 
+import re
 import pandas as pd
 import streamlit as st
 from utils import get_model_class
@@ -123,6 +124,45 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str:
     if operator in ['is_null', 'not_null']:
         return f"`{column}`.{operator_map[operator]}()"
     
+    if operator in ['is_parent', 'is_child']:
+        children = set()
+        items = df[column].astype(str).str.upper().dropna().unique()
+        
+        # Pre-compile regex pattern for ATC child validation
+        atc_child_pattern = re.compile(r'^[A-Z][0-9]{2}[A-Z]{0,2}[0-9]{0,4}$')  # Standard ATC pattern
+        
+        for item in items:
+            # Skip if item doesn't match ATC structure (e.g., 'ATL')
+            if not atc_child_pattern.match(item):
+                continue
+                
+            for alt_item in items:
+                if item == alt_item:
+                    continue
+                    
+                # Regex check for proper parent-child relationship
+                if (re.match(f'^{alt_item}([A-Z][0-9]|[0-9]{{2}}).*', item) 
+                    and len(alt_item) < len(item)):
+                    children.add(item)
+                    break
+        
+        not_operator = '~' if operator == 'is_parent' else ''
+        return f"{not_operator}`{column}`.isin({list(children)})"
+    
+    elif operator in ['length_equals','length_not_equals']:
+        if value is None: return ""
+        
+        target_column = value
+        if target_column not in df:
+            st.warning(f"Column {target_column} does not exist.")
+            return ""
+        
+        if not pd.api.types.is_numeric_dtype(df[target_column]):
+            st.warning(f"Target column '{target_column}' must contain numeric values for length comparison.")
+            return ""
+        
+        return f"`{column}`.str.len() {operator_map[operator]} `{target_column}`"
+    
     elif operator in ['column_equals','column_not_equals']:
         if value is None: return ""
         
@@ -209,6 +249,31 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str:
         # Build the regex condition
         not_operator = '~' if operator == 'wildcard_not_match' else ''
         return f"{not_operator}`{column}`.str.match('^{pattern}$', case=False, na=False)"
+    
+    elif operator in ['non_distinct_combinations', 'distinct_combinations']:
+        if value is None: return ""
+            
+        if value not in df:
+            st.warning(f"Column {value} does not exist.")
+            return ""
+            
+        non_distinct_values = (
+            df.groupby(value)[column]
+            .nunique()
+            .loc[lambda x: x > 1]
+            .dropna()
+            .index
+        ).tolist()
+        
+        # from the remaining distinct records, get the "column" where "value" not in "non_distinct_values"
+        # then include result (list) in final query
+                
+        if len(non_distinct_values) == 0:
+            return "False" if operator == 'non_distinct_combinations' else "True"
+        
+        not_operator = '~' if operator == 'non_distinct_combinations' else ''
+                
+        return f"{not_operator}`{value}`.isin({non_distinct_values})"
         
     # --- Pre-process values based on column data type ---
     if pd.api.types.is_numeric_dtype(df[column]) and operator not in ['in_list', 'not_in_list']:
@@ -325,68 +390,7 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str:
             return ""
     else:
         return ""
-
-def apply_column_operation(df: pd.DataFrame, condition: dict) -> pd.DataFrame:
-    """
-    Apply column operations like merge and split to column.
-
-    Args:
-        df (pd.DataFrame): The DataFrame to operate on.
-        condition (dict): A dictionary containing column operation details.
-                          Expected keys: 'column', 'operator', 'value_1', 'value_2'.
-
-    Returns:
-        pd.DataFrame: The DataFrame after applying the operation.
-    """
-    df_copy = df.copy()
-    column = condition['column']
-    operator = condition['operator']
-    value = condition['value_1']
-    value_2 = condition.get('value_2', None)
     
-    if operator == 'merge':
-        if value not in df_copy.columns:
-            st.warning(f"Column '{value}' not found for merge operation.")
-            return df_copy
-        if not value_2 or not isinstance(value_2, str):
-            st.warning("Please provide a valid column name for the merged result.")
-            return df_copy
-        
-        df_copy[value_2] = df_copy[column].astype(str) + df_copy[value].astype(str)
-    
-    elif operator == 'split':
-        if value is None or value == '':
-            st.warning("Delimiter cannot be empty for split operation.")
-            return df_copy
-        
-        delimiter = str(value)
-        # Handle value_2 as comma-separated column names
-        split_cols = None
-        if value_2 and isinstance(value_2, str):
-            split_cols = [col.strip() for col in value_2.split(',') if col.strip()]
-        elif isinstance(value_2, list):
-            split_cols = value_2
-        
-        # Perform the split
-        split_df = df_copy[column].str.split(delimiter, expand=True)
-        
-        if split_cols:
-            if len(split_cols) == split_df.shape[1]:
-                split_df.columns = split_cols
-            else:
-                st.warning(
-                    f"Number of split columns ({split_df.shape[1]}) doesn't match "
-                    f"provided names ({len(split_cols)}). Using default column names."
-                )
-                # Add split columns with default names if counts don't match
-                split_df.columns = [f"{column}_{i+1}" for i in range(split_df.shape[1])]
-            df_copy = pd.concat([df_copy, split_df], axis=1)
-        else:
-            # If no column names provided, store as list in original column
-            df_copy[column] = df_copy[column].str.split(delimiter)
-            
-    return df_copy
-
 def get_op(op_str: str) -> str:
     """Helper to get standardized query operators."""
     if op_str.lower() == 'and':
@@ -402,8 +406,16 @@ def execute_query(all_sheets: dict, joined_df: pd.DataFrame, conditions: dict) -
     - Nested logical conditions
     - Position-specific wildcards
     - Mixed AND/OR logic
+    
+    Args:
+        sheets (pd.DataFrame): all sheets uploaded
+        joined_df (pd.DataFrame): jioned dataframes
+        conditions (dict): query conditions
+
+    Returns:
+        pd.DataFrame: Filtered DataFrame
     """
-    if joined_df.empty:
+    if not conditions or joined_df.empty:
         return joined_df
     
     try:
@@ -412,12 +424,7 @@ def execute_query(all_sheets: dict, joined_df: pd.DataFrame, conditions: dict) -
         current_mask = pd.Series(True, index=joined_df.index)
         current_logic = 'AND'  # Default to AND logic
         
-        for cond in conditions:
-            # Handle column operations
-            if cond.get('operator') in ['merge', 'split']:
-                joined_df = apply_column_operation(joined_df, cond)
-                continue
-            
+        for cond in conditions:            
             # Handle logic changes
             if 'nested_logic' in cond:
                 # Apply current group with its logic

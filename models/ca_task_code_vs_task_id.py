@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean
+from sqlalchemy import Column, String, Integer, Boolean, Text
 from models.base import BaseModel
 
 class CaTaskCodeVsTaskId(BaseModel):
@@ -6,8 +6,7 @@ class CaTaskCodeVsTaskId(BaseModel):
     extend_existing=True
     
     task_code = Column(String, unique=True, nullable=False)
-    desc_1 = Column(String, nullable=False)
-    desc_2 = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
     active = Column(Boolean, default=True, index=True)
     created_by = Column(Integer)
     

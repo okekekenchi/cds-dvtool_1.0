@@ -1,9 +1,16 @@
 
+column_operators = {
+    'merge': 'Merge',
+    'split': 'Split'
+}
+
 operators = {
-    'equals':'Equals',
-    'not_equals':'Not Equals',
+    'equals':'Value Equals',
+    'not_equals':'Value Not Equals',
     'column_equals':'Column Equals',
     'column_not_equals':'Column Not Equal to',
+    'length_equals':'Length Equals',
+    'length_not_equals':'Length Not Equals',
     'greater_than':'Greater than',
     'less_than': 'Less than',
     'greater_than_equal': 'Greater than equal',
@@ -12,22 +19,26 @@ operators = {
     'starts_with': 'Starts with',
     'ends_with': 'Ends with',
     'is_null': 'Is null',
-    'not_null': 'Not null',
+    'not_null': 'Is Not null',
     'contains': 'Contains',
     'not_contains': 'Does not contains',
     'in_list': 'In list',
-    'not_in_list': 'Not in list',
-    'merge': 'Merge',
-    'split': 'Split',
-    'wildcard_match': 'Like',
-    'wildcard_not_match': 'Not Like'
+    'not_in_list': 'Is Not in list',
+    'is_parent': 'Is Parent',
+    'is_child': 'Is Child',
+    'wildcard_match': 'Is Like',
+    'wildcard_not_match': 'Is Not Like',
+    'distinct_combinations': 'Distinct Combinations',
+    'non_distinct_combinations': 'Non Distinct Combinations',
 }
 
 operator_map = {
     'equals':'==',
     'column_equals':'==',
+    'length_equals':'==',
     'column_not_equals':'!=',
     'not_equals':'!=',
+    'length_not_equals':'!=',
     'greater_than':'>',
     'less_than':'<',
     'greater_than_equal':'>=',
@@ -40,14 +51,3 @@ operator_map = {
     'wildcard_match': 'str.match',
     'wildcard_not_match': 'str.match'
 }
-
-# def clear_sheets():
-#     """Reset all sheets"""
-#     st.session_state.update({
-#         "config": {
-#             "sheets": [],
-#             "joins": [],
-#             "conditions": []
-#         }
-#     })
-

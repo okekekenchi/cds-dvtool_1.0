@@ -11,7 +11,7 @@ class ValidationChecklist(BaseModel):
     name = Column(String(100), unique=True, nullable=False, index=True)
     description = Column(Text, nullable=False)
     tags = Column(JSON, default=list)
-    config = Column(JSON, default={"sheets": [], "joins": [], "conditions": []})
+    config = Column(JSON, default={"sheets": [], "joins": [], "col_operations": [], "conditions": []})
     active = Column(Boolean, default=True, index=True)
     created_by = Column(Integer, ForeignKey('users.id'))
     

@@ -33,6 +33,7 @@ checklist = {
 config = {
     'sheets': [],
     'joins': [],
+    'col_operations': [],
     'conditions': []
 }
 
@@ -166,10 +167,11 @@ def upload_workbook():
                 'only_sheets': sheets,
                 'sheets': sheets | tables,
                 'workbook_hash': current_file_hash,
-                # "config": config,
                 "list_type": None,
                 "list_source_str": None
             })
+    else:            
+        st.warning("Select file to continue")
         
     return st.session_state.uploaded_file
     
