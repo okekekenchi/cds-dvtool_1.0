@@ -166,27 +166,6 @@ def selected_sheets_and_columns_are_present_in_file(sheets:dict):
                         st.badge(f"**{on_col['right_column']}** column is missing but required by the query", color='orange')
                         st.stop()
     
-    if config_db['conditions']:
-        for condition in config_db['conditions']:
-            if condition.get('column') and condition.get('column') not in columns_across_sheets:
-                st.badge(f"**{condition.get('column')}** column is missing but required by the query", color='orange')
-                st.stop()
-                
-    #         if condition['operator'] in ['column_equals','column_not_equals']:
-    #             if condition['value_1'] not in columns_across_sheets:
-    #                 st.badge(f"**{condition['value_1']}** column is missing but required by the query", color='orange')
-    #                 st.stop()
-            
-    #         if condition['operator'] in ['in_list', 'not_in_list']:
-    #             list_source = condition['value_1']
-    #             parts = list_source.split('.', maxsplit=2)
-    
-    #             if len(parts) == 3:                
-    #                 list_type, source, column = parts
-                    
-    #                 if source not in sheets:
-    #                     st.badge(f"**{sheet}** sheet is missing but required by the query", color='orange')
-    #                     st.stop()
     return True
 
 def upload_workbook():

@@ -16,6 +16,7 @@ from database.database import get_db
 from enums.list_type import ListType
 from util.project_utils import operator_map
 from services.join_service import get_joined_sheets
+from services.column_operation_service import run_column_operations
 from models.validation_checklist import ValidationChecklist
 
 
@@ -80,9 +81,11 @@ def load_checklist(config: dict, all_sheets:dict) -> pd.DataFrame:
     
     selected_sheets = get_selected_sheets(all_sheets, config['sheets'])
     
-    joined_df = get_joined_sheets(selected_sheets, config['joins'])
+    joined_df = get_joined_sheets(selected_sheets, config.get('joins', []))
+    
+    joined_df = run_column_operations(joined_df, config.get('col_operations', []))
 
-    queried_df = execute_query(all_sheets, joined_df, config['conditions'])
+    queried_df = execute_query(all_sheets, joined_df, config.get('conditions', []))
     
     return queried_df
 
@@ -129,11 +132,11 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str:
         items = df[column].astype(str).str.upper().dropna().unique()
         
         # Pre-compile regex pattern for ATC child validation
-        atc_child_pattern = re.compile(r'^[A-Z][0-9]{2}[A-Z]{0,2}[0-9]{0,4}$')  # Standard ATC pattern
+        atc_pattern = re.compile(r'^[A-Z][0-9]{2}[A-Z]{0,2}[0-9]{0,4}$')  # Standard ATC pattern
         
         for item in items:
             # Skip if item doesn't match ATC structure (e.g., 'ATL')
-            if not atc_child_pattern.match(item):
+            if not atc_pattern.match(item):
                 continue
                 
             for alt_item in items:
