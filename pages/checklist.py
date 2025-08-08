@@ -6,9 +6,9 @@ def reload_package(package_name: str):
         if name == package_name or name.startswith(f"{package_name}."):
             importlib.reload(sys.modules[name])
 
-reload_package("components.checklist_view")
-reload_package("components.checklist_create_form")
-reload_package("components.checklist_update_form")
+# reload_package("components.checklist_view")
+# reload_package("components.checklist_create_form")
+# reload_package("components.checklist_update_form")
 
 import streamlit as st
 from loader.css_loader import load_css
