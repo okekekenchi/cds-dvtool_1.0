@@ -10,92 +10,99 @@ reload_package("util.project_utils")
 
 import pandas as pd
 import streamlit as st
-from utils import alert
 from util.project_utils import column_operators
 
     
-def remove_condition(index):
+def remove_condition(sheet_index:int, operation_index:int):
     """Remove a condition from the list"""
-    st.session_state.config['col_operations'].pop(index)
+    st.session_state.config['sheets'][sheet_index]['col_operations'].pop(operation_index)
+    st.rerun(scope="fragment")
 
-def clear_col_operations():
+def clear_col_operations(sheet_index:int):
     """Reset all column operations"""
-    st.session_state.config['col_operations'] = []
+    st.session_state.config['sheets'][sheet_index]['col_operations'] = []
+    st.rerun(scope="fragment")
 
-def show_selected_col_operations():
-    if st.session_state.config.get('col_operations', []):
-        columns = ['Column', 'Operator', 'Value', 'Action']
+
+def show_selected_col_operations(column_operations:list, sheet_index:int):    
+    if column_operations:
+        columns = ['Column', 'Operator', 'Value 1', 'Value 2', 'Action']
         
-        for i, col in enumerate(st.columns([0.33, 0.35, 0.3, 0.07])):
+        for i, col in enumerate(st.columns([0.15, 0.27, 0.15, 0.33, 0.1])):
             with col:
                 st.write(f"**{columns[i]}**")
         
-        for i, cond in enumerate(st.session_state.config['col_operations']):
-            col1, col3, col4, col6 = st.columns([0.33, 0.35, 0.3, 0.07])        
+        for i, cond in enumerate(column_operations):
+            col1, col2, col3, col4, col5 = st.columns([0.15, 0.27, 0.15, 0.33, 0.1])
             with col1:
                 st.write(f"{cond['column']}")
-            with col3:
+            with col2:
                 st.write(f"{column_operators.get(cond['operator'])}")
+            with col3:
+                    st.write(f"{cond['value_1']}")
             with col4:
-                if cond['operator'] in ['between']:
-                    st.write(f"{cond['value_1']} **and** {cond['value_2']}")
-                elif cond['operator'] in ['contains','not_contains'] and cond['value_2']:
-                    st.write(f"{cond['value_1']} **in position** {cond['value_2']}")
-                elif cond['operator'] in ['in_list','not_in_list','wildcard_match', 'wildcard_not_match'] and cond['value_2']:
-                    st.write(f"{cond['value_2']} **char of** {cond['value_1']}")
-                else:
-                    st.write(f"{cond['value_1'] or 'N/A'}")
-            with col6:
-                st.button("", icon=":material/delete:", help="Delete query condition",
-                          key=f"remove_col_op_{i}", on_click=remove_condition, args=(i,))
-    
-def column_operation(joined_df: pd.DataFrame) -> pd.DataFrame:
+                    st.write(f"{cond['value_2'] if 'value_2' in cond else 'N/A'}")
+            with col5:
+                if (st.button("", icon=":material/delete:", help="Delete query condition",
+                                key=f"remove_col_op_{i}")):
+                    remove_condition(sheet_index, i)
+    else:
+        st.info("You have not performed any column operation.")
+        
+        
+def column_operation(all_sheets:dict, sheet_name:str, sheet_index:int) -> list:
+    if 'col_operations' not in st.session_state.config['sheets'][sheet_index]:
+        st.session_state.config['sheets'][sheet_index]['col_operations'] = []
+        
     col1, col2, col3, col4 = st.columns([3, 3, 3, 3])
+    selected_column_operations = st.session_state.config['sheets'][sheet_index]['col_operations']
     new = {}
     new['value_2'] = None
-    options = ([] if joined_df.empty else joined_df.columns.to_list())
+    sheet_df = all_sheets.get(sheet_name, pd.DataFrame())
+    options = ([] if sheet_df.empty else sheet_df.columns.to_list())
         
     with col1:
         new['column'] = st.selectbox("Column *", key="new_col_op", options=options)
         
     with col2:
-        new['operator'] = st.selectbox("Operator *",
+        new['operator'] = st.selectbox("Operator *", help="",
                                         options=column_operators.keys(),
                                         key="new_col_op_operator",
                                         format_func=lambda x: column_operators[x])
     with col3:        
         if new['operator'] == "merge":
             new['value_1'] = st.selectbox("Column *", key="new_merge_col_op",
-                                            options=([] if joined_df.empty else joined_df.columns))
+                                            options=([] if sheet_df.empty else sheet_df.columns))
                    
         elif new['operator'] == "split":
-            new['value_1'] = st.text_input("Delimiter *", key="split_delimiter_input")
+            new['value_1'] = st.text_input("Delimiter : Max Split * (e.g.  , : 2)", key="split_delimiter_input",
+                                           help="Specify how you wish to split the column.")
+                   
+        elif new['operator'] == "get_character":
+            new['value_1'] = st.number_input("Character Position", key="split_char_pos_input",
+                                             step=1, min_value=1, max_value=100)
     with col4:
-        if new['operator'] == "merge":
-            new['value_2'] = st.text_input("Column name *", key="merged_column_name")
+        if new['operator'] in ["merge", "get_character"]:
+            new['value_2'] = st.text_input("New Column name *", key="merged_column_name")
                    
         elif new['operator'] == "split":
-            new['value_2'] = st.text_input("Column Names *", key="split_Column_names",
-                                                help="Separated by comma, specify the column names")
+            new['value_2'] = st.text_input("New Column Names *", key="split_Column_names",
+                                            help="Separated by comma, specify the column names")
                                 
-    _, col1, col2 = st.columns([0.7,0.2,0.05])
+    _, col1, col2 = st.columns([0.73,0.18,0.09])
     
     with col1:
         if st.button(f"Add", key="add_col_op", icon=":material/add:"):
-            if not new['column'] or not new['operator'] or not new['value_1']:
-                alert("Fill all required fields")
-                return
-            
-            try:
-                if new not in st.session_state.config.get('col_operations', []):
-                    st.session_state.config['col_operations'].append(new)
-                    st.rerun()
+            if new['column'] and new['operator'] and new['value_1'] and new['value_2']:                
+                if new not in st.session_state.config['sheets'][sheet_index].get('col_operations', []):
+                    selected_column_operations.append(new)
                 else:
-                    alert("You already have this condition")
-            except Exception as e:
-                st.session_state.config['col_operations'] = []
+                    st.toast("You already have this condition")
+            else:
+                st.toast("Fill all required fields")
     with col2:
-        st.button("", on_click=clear_col_operations, icon=":material/refresh:",
-                  help="Clear all column operations", key="clear_col_ops")
+        if (st.button("", icon=":material/refresh:", key="clear_col_ops",
+                      help="Clear all column operations")):
+            clear_col_operations(sheet_index)
     
-    show_selected_col_operations()
+    show_selected_col_operations(selected_column_operations, sheet_index)

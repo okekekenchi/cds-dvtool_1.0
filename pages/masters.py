@@ -7,7 +7,6 @@ from loader.css_loader import load_css
 from util.datatable import get_table_columns, get_table_names, get_table_data, delete_record
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 import pandas as pd
-from models.bh_task_type import BhTaskType
 import time
 from database.database import get_db, engine
 
@@ -27,10 +26,6 @@ def init_session_var():
     st.session_state.selected_row = {}
   if "active_records" not in st.session_state:
     st.session_state.active_records = True
-
-def load_task_types():
-    with get_db() as db:
-        return BhTaskType.where(db, ["id","task_type","desc"], **{"active":True})
 
 def field_name(field: str):
     f_name =  f"{field} *" if field in required_fields else field
@@ -106,12 +101,6 @@ def form_fields(data):
             
             if col in bool_fields:
                 data[col] = st.checkbox(field_name(col), value=current_value or True)
-            elif col == "task_type_id":
-                options = { item['id']: f"{item['task_type']} - {item['desc']}" for item in load_task_types() }
-                data[col] = st.selectbox("Select a task type",
-                                            options=options.keys(),
-                                            index=list(options.keys()).index(current_value) if current_value else 0,
-                                            format_func=lambda x: options[x])
             else:
                 data[col] = st.text_input(field_name(col), value=current_value)
     return data
@@ -226,14 +215,6 @@ def main():
         user_id = st.session_state.user_id
         df['created_by'] = df['created_by'].map(lambda x: "Me" if x == user_id else user_map.get(x, "System")).fillna("System").replace("", "System")
 
-        
-        if "task_type_id" in df:
-            task_types = { item['id']: f"{item['task_type']} - {item['desc']}" for item in load_task_types() }
-            df['task_type'] = df['task_type_id'].map(task_types)
-            cols = df.columns.tolist()
-            cols = [cols[-1]] + cols[:-1] # Reorder columns: last column first, followed by the rest
-            df = df[cols] # Reassign the DataFrame with the new column order
-
         if not df.empty:
             # Configure tablez
             gb = GridOptionsBuilder.from_dataframe(df)
@@ -245,9 +226,6 @@ def main():
             for column in columns_to_hide:
                 if column in df:
                     gb.configure_column(field=column, hide=True)
-
-            if "task_type_id" in df:
-                gb.configure_column(field="task_type_id", hide=True)
                 
             gb.configure_column(field="created_by", header_name="Created by")
             gb.configure_column(field="created_by", header_name="Created by")

@@ -11,12 +11,10 @@ reload_package("services.join_service")
 reload_package("components.select_sheets")
 reload_package("components.join_sheets")
 reload_package("components.query_builder")
-reload_package("components.column_operation")
 
 import streamlit as st
 from components.join_sheets import join_sheets
 from components.query_builder import build_query
-from components.column_operation import column_operation
 from components.select_sheets import select_sheets
 from services.join_service import get_joined_sheets
 from services.column_operation_service import run_column_operations
@@ -39,22 +37,21 @@ config = {
     'joins': [],
     'conditions': []
 }
-
-def get_selected_sheets(all_sheets: dict, selected_sheet_names: list[str]) -> dict:
-    return { name: all_sheets.get(name) for name in selected_sheet_names }
     
 def configure_checklist():
     if st.session_state.checklist.get('sheets'): # Question this
         st.markdown("""<h4> Configuration </h4>""", unsafe_allow_html=True)
-        tabs = ["Select Sheets *", "Join Sheets", "Column Operations", "Build Query", "View Output"]
-        sheet_tab, join_tab, col_op_tab, query_tab, output_tab = st.tabs(tabs, width='stretch')
+        tabs = ["Select Sheets *", "Join Sheets", "Build Query", "View Output"]
+        sheet_tab, join_tab, query_tab, output_tab = st.tabs(tabs, width='stretch')
         
         with sheet_tab:
             select_sheets(all_sheets=st.session_state.checklist['sheets'])
-            selected_sheets = get_selected_sheets(
+            
+            selected_sheets = run_column_operations(
                                 all_sheets=st.session_state.checklist['sheets'],
-                                selected_sheet_names=st.session_state.config['sheets']
+                                selected_sheets=st.session_state.config['sheets']
                               )
+            
         with join_tab:
             if len(selected_sheets) >= 2:
                 join_sheets(sheets=selected_sheets)
@@ -66,16 +63,6 @@ def configure_checklist():
                                 sheets=selected_sheets,
                                 join_conditions=st.session_state.config.get('joins', [])
                             )
-        with col_op_tab:
-            if len(selected_sheets):
-                column_operation(joined_df=joined_df)
-                
-                joined_df = run_column_operations(
-                                joined_df=joined_df,
-                                col_operations=st.session_state.config.get('col_operations', [])
-                            )
-            else:
-                st.info("Select sheets/tables to begin column operations")
         
         with query_tab:
             if len(selected_sheets):

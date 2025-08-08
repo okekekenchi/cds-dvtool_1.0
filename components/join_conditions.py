@@ -5,7 +5,7 @@ from services.join_service import join_types
 @st.dialog("Join Conditions", width='large')
 def join_conditions(sheets:dict, idx:int, join:dict):
     """multi-column join"""
-    col1, col2, col3, _ = st.columns([0.15, 0.3, 0.3, 0.25])
+    col1, col2, col3, _ = st.columns([0.15, 0.3, 0.35, 0.2])
 
     with col1:
         st.write('')

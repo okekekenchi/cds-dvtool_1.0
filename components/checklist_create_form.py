@@ -25,7 +25,6 @@ checklist = {
     'tags': [],
     'workbook': None,
     'sheets': {},
-    'workbook_hash': None,
     'active': True,
     'config': {}
 }
@@ -59,7 +58,7 @@ def load_tags():
     with get_db() as db:
         return Tag.where(db, ["id","name"])
     
-def form_fields():        
+def form_inputs():        
     col11, col12 = st.columns([0.3, 0.7])
     with col11:
         st.session_state.checklist['code'] = st.text_input(
@@ -120,7 +119,7 @@ def save_checklist():
             checklist['config'] = st.session_state.config
             checklist['created_by'] = st.session_state.user_id
             
-            for key in ['workbook','sheets','workbook_hash']:
+            for key in ['workbook','sheets']:
                 checklist.pop(key, None)
                 
             with get_db() as db:
@@ -157,19 +156,16 @@ def upload_workbook():
     st.markdown("<style>button { max-width:150px; }</style>", unsafe_allow_html=True)
     
     if st.session_state.uploaded_file:
-        current_file_hash = get_file_hash(st.session_state.uploaded_file)
-                
-        if st.session_state.checklist.get("workbook_hash", None) != current_file_hash:
-            file, sheets, tables = load_data(current_file_hash)
-            
-            st.session_state.checklist.update({
-                'workbook': file,
-                'only_sheets': sheets,
-                'sheets': sheets | tables,
-                'workbook_hash': current_file_hash,
-                "list_type": None,
-                "list_source_str": None
-            })
+        file_hash = get_file_hash(st.session_state.uploaded_file)
+        file, sheets, tables = load_data(file_hash)
+        
+        st.session_state.checklist.update({
+            'workbook': file,
+            'only_sheets': sheets,
+            'sheets': sheets | tables,
+            "list_type": None,
+            "list_source_str": None
+        })
     else:            
         st.warning("Select file to continue")
         
@@ -185,7 +181,7 @@ def checklist_create_form():
     col1, col2 = st.columns([0.5, 0.5], border=True)
         
     with col1:
-        form_fields()
+        form_inputs()
         
     with col2:
         form_action()

@@ -54,7 +54,7 @@ def load_tags():
     with get_db() as db:
         return Tag.where(db, ["id","name"])
 
-def form_fields():        
+def form_inputs():        
     col11, col12 = st.columns([0.3, 0.7])
     with col11:
         st.session_state.checklist['code'] = st.text_input(
@@ -111,7 +111,8 @@ def save_checklist():
     try:
         if can_save():
             updated = False
-            checklist = { key:st.session_state.checklist.get(key) for key in ['id','code','name','description','tags','active']}
+            form_fields = [ 'id','code','name','description','tags','active' ]
+            checklist = { key:st.session_state.checklist.get(key) for key in form_fields }
             checklist['config'] = st.session_state.config
             
             with get_db() as db:
@@ -143,31 +144,6 @@ def reset_form():
     st.session_state.reset_form = False
     st.rerun()
 
-def selected_sheets_and_columns_are_present_in_file(sheets:dict):
-    config_db = st.session_state.config
-    columns_across_sheets = []
-
-    if config_db['sheets']:
-        for sheet in config_db['sheets']:
-            if sheet not in sheets:
-                st.badge(f"**{sheet}** sheet is missing but required by the query", color='orange')
-                st.stop()
-            else:
-                columns_across_sheets.extend(list(sheets[sheet].columns))
-    
-    if config_db['joins']:
-        for join in config_db['joins']:
-            if join['on_cols']:
-                for on_col in join['on_cols']:
-                    if on_col["left_column"] not in columns_across_sheets:
-                        st.badge(f"**{on_col['left_column']}** column is missing but required by the query", color='orange')
-                        st.stop()
-                    if on_col["right_column"] not in columns_across_sheets:
-                        st.badge(f"**{on_col['right_column']}** column is missing but required by the query", color='orange')
-                        st.stop()
-    
-    return True
-
 def upload_workbook():
     st.file_uploader(
         "Select Workbook (Excel File) *",
@@ -178,28 +154,25 @@ def upload_workbook():
     st.markdown("<style>button { max-width:150px; }</style>", unsafe_allow_html=True)
     
     if st.session_state.uploaded_file:
-        current_file_hash = get_file_hash(st.session_state.uploaded_file)
+        file_hash = get_file_hash(st.session_state.uploaded_file)
         
-        if st.session_state.checklist.get("workbook_hash", None) != current_file_hash:
-            file, sheets, tables = load_data(current_file_hash)
-            sheets_and_tables = sheets | tables
+        file, sheets, tables = load_data(file_hash)
+        sheets_and_tables = sheets | tables
+        
+        st.session_state.update({
+            "config": st.session_state.selected_checklist.get('config')
+        })
             
-            if selected_sheets_and_columns_are_present_in_file(sheets_and_tables):
-                st.session_state.update({
-                    "config": st.session_state.selected_checklist.get('config')
-                })
-                
-            st.session_state.checklist.update({
-                'workbook': file,
-                'only_sheets': sheets,
-                'sheets': sheets_and_tables,
-                'workbook_hash': current_file_hash,
-                "list_type": None,
-                "list_source_str": None
-            })
+        st.session_state.checklist.update({
+            'workbook': file,
+            'only_sheets': sheets,
+            'sheets': sheets_and_tables,
+            "list_type": None,
+            "list_source_str": None
+        })
     else:            
         st.warning("Select file to continue")
-        
+    
     return st.session_state.uploaded_file
 
 def checklist_update_form():
@@ -212,7 +185,7 @@ def checklist_update_form():
     col1, col2 = st.columns([0.5, 0.5], border=True)
     
     with col1:
-        form_fields()
+        form_inputs()
         
     with col2:
         form_action()

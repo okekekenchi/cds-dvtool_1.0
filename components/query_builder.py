@@ -117,7 +117,7 @@ def build_query(all_sheets: dict, joined_df: pd.DataFrame) -> pd.DataFrame:
                                         key="new_operator",
                                         format_func=lambda x: operators[x])
     with col3:
-        if new['operator'] in ['is_null', 'not_null', 'is_parent', 'is_child']:
+        if new['operator'] in ['is_null', 'not_null', 'has_parent', 'has_no_parent']:
             new['value_1'] = None
             new['value_2'] = None
             value_1_is_required = False
@@ -138,6 +138,10 @@ def build_query(all_sheets: dict, joined_df: pd.DataFrame) -> pd.DataFrame:
                                                 step=1, max_value=100)
             else:
                 new['value_2'] = None
+                
+        elif new['operator'] in ['in_column_list', 'not_in_column_list']:
+            new['value_1'] = st.selectbox("Column *", key="new_matching_column", options=options)
+            new['value_2'] = None
                    
         elif new['operator'] in ['in_list', 'not_in_list']:
             list_type = st.selectbox("List type *",

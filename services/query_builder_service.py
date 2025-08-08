@@ -33,7 +33,8 @@ def get_list_from_selected_source(all_sheets:dict, list_source: str,) -> list:
     
     if list_type == ListType.Master.value:
         with get_db() as db:
-            return get_model(source).all_df(db, columns=[column]).drop_duplicates().dropna().values.tolist()
+            data = get_model(source).all_df(db, columns=[column]).drop_duplicates().dropna().values.tolist()
+            return [item[0] for item in data]
         
     elif list_type == ListType.Sheet.value:
         if source in all_sheets:
@@ -78,19 +79,17 @@ def load_checklist(config: dict, all_sheets:dict) -> pd.DataFrame:
         if sheet not in all_sheets.keys():
             st.error(f"Sheet {sheet} not found")
             return pd.DataFrame
-    
-    selected_sheets = get_selected_sheets(all_sheets, config['sheets'])
+     
+    selected_sheets = run_column_operations(all_sheets, config['sheets'])
     
     joined_df = get_joined_sheets(selected_sheets, config.get('joins', []))
-    
-    joined_df = run_column_operations(joined_df, config.get('col_operations', []))
 
     queried_df = execute_query(all_sheets, joined_df, config.get('conditions', []))
     
     return queried_df
 
 
-def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str:
+def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str|pd.Series:
     """
     Builds a pandas query condition string from a condition dictionary.
     
@@ -127,29 +126,19 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str:
     if operator in ['is_null', 'not_null']:
         return f"`{column}`.{operator_map[operator]}()"
     
-    if operator in ['is_parent', 'is_child']:
+    if operator in ['has_parent', 'has_no_parent']:
         children = set()
         items = df[column].astype(str).str.upper().dropna().unique()
         
-        # Pre-compile regex pattern for ATC child validation
-        atc_pattern = re.compile(r'^[A-Z][0-9]{2}[A-Z]{0,2}[0-9]{0,4}$')  # Standard ATC pattern
-        
         for item in items:
-            # Skip if item doesn't match ATC structure (e.g., 'ATL')
-            if not atc_pattern.match(item):
-                continue
-                
             for alt_item in items:
-                if item == alt_item:
+                if item == alt_item or len(alt_item) >= len(item):
                     continue
-                    
-                # Regex check for proper parent-child relationship
-                if (re.match(f'^{alt_item}([A-Z][0-9]|[0-9]{{2}}).*', item) 
-                    and len(alt_item) < len(item)):
+                
+                if item[:-2] == alt_item:
                     children.add(item)
-                    break
         
-        not_operator = '~' if operator == 'is_parent' else ''
+        not_operator = '~' if operator == 'has_no_parent' else ''
         return f"{not_operator}`{column}`.isin({list(children)})"
     
     elif operator in ['length_equals','length_not_equals']:
@@ -219,10 +208,22 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str:
                 f"`{column}` == "
                 f"`{target_column}`.str[{target_char_pos-1}])"
             )
+            
         
+        col_str = df[column].astype(str)
+        target_col_str = df[target_column].astype(str)
+
+        # Use the converted columns for the comparison
+        if operator == 'column_equals':
+            return col_str.eq(target_col_str)
+        else:  # 'column_not_equals'
+            return col_str.ne(target_col_str)
+    
+
         # Default: full column comparison
         not_operator = '~' if operator == 'column_not_equals' else ''
         return f"{not_operator}`{column}`.eq(`{target_column}`)"
+    
     
     elif operator in ['wildcard_match', 'wildcard_not_match']:
         if value is None:
@@ -341,6 +342,28 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str:
         else:
             return f"{_not}`{column}`.str.contains({value}, case=False, na=False)" if value is not None else ""
     
+    elif operator in ['in_column_list', 'not_in_column_list']:
+        target_column = condition['value_1']
+
+        if target_column not in df.columns:
+            st.warning(f"Target column '{target_column}' does not exist.")
+            return pd.Series(False, index=df.index)
+
+        # This creates a boolean Series where each row's `column` value
+        # is checked against the list of values in the *same row* of `target_column`.
+        condition_mask = df.apply(
+            lambda row: str(row[column]).strip() in [
+                v.strip() for v in str(row[target_column]).split(',')
+            ] if pd.notna(row[target_column]) else False,
+            axis=1
+        )
+
+        # Invert the mask if the operator is 'not_in_column_list'
+        if operator == 'not_in_column_list':
+            return ~condition_mask
+        else:
+            return condition_mask
+        
     elif operator in ['in_list', 'not_in_list']:
         if value in ['', None]:
             return ""
@@ -442,24 +465,28 @@ def execute_query(all_sheets: dict, joined_df: pd.DataFrame, conditions: dict) -
                 continue
             
             # Build and apply condition
-            condition_str = build_condition(all_sheets, joined_df, cond)
-            if not condition_str:
-                continue
+            condition_result = build_condition(all_sheets, joined_df, cond)
             
-            try:
-                # Safely evaluate the condition
-                cond_mask = joined_df.eval(condition_str, engine='python')
-                
-                # Apply with current logic
-                if 'logic' in cond and cond['logic'].upper() == 'OR':
-                    current_mask |= cond_mask
-                else:
-                    current_mask &= cond_mask
-                    
-            except Exception as e:
-                st.error(f"Condition failed: {condition_str}\nError: {str(e)}")
-                continue
-        
+            # Check the type of the result and handle accordingly
+            if isinstance(condition_result, str):
+                if not condition_result:
+                    continue
+                try:
+                    cond_mask = joined_df.eval(condition_result, engine='python')
+                except Exception as e:
+                    st.error(f"Condition failed: {condition_result}\nError: {str(e)}")
+                    continue
+            elif isinstance(condition_result, pd.Series):
+                cond_mask = condition_result
+            else:
+                continue # Handle unexpected return types
+            
+            # Apply with current logic
+            if 'logic' in cond and cond['logic'].upper() == 'OR':
+                current_mask |= cond_mask
+            else:
+                current_mask &= cond_mask
+                                        
         # Apply the final group
         if current_logic == 'AND':
             final_mask &= current_mask
@@ -469,5 +496,6 @@ def execute_query(all_sheets: dict, joined_df: pd.DataFrame, conditions: dict) -
         return joined_df[final_mask]
     
     except Exception as e:
+        st.write(e)
         st.error(f"Critical failure: {str(e)}")
         return joined_df

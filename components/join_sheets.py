@@ -81,19 +81,18 @@ def join_sheets(sheets: dict):
                                     )
     with col4:
         if st.button("Add", key="add_joins", icon=":material/add:"):
-            if not new_join['left_table'] or not new_join['right_table'] or not new_join['join_type']:
-                alert("Fill all required fields")
-                return
-            
-            if new_join['left_table'] == new_join['right_table']:
-                alert("You have selected the same option for both left and right tables")
-                return
-            
-            if new_join not in st.session_state.config['joins']:
-                st.session_state.config['joins'].append(new_join)
-                st.rerun()
+            if new_join['left_table'] and new_join['right_table'] and new_join['join_type']:            
+                if new_join['left_table'] == new_join['right_table']:
+                    alert("You have selected the same option for both left and right tables")
+                    return
+                
+                if new_join not in st.session_state.config['joins']:
+                    st.session_state.config['joins'].append(new_join)
+                    st.rerun()
+                else:
+                    alert("You have already joined these sheets")
             else:
-                alert("You have already joined these sheets")
+                alert("Fill all required fields")
     
     print_matching_columns(sheets, new_join)
         

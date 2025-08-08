@@ -1,7 +1,8 @@
 
 column_operators = {
     'merge': 'Merge',
-    'split': 'Split'
+    'split': 'Split',
+    'get_character':'Get Character'
 }
 
 operators = {
@@ -9,8 +10,8 @@ operators = {
     'not_equals':'Value Not Equals',
     'column_equals':'Column Equals',
     'column_not_equals':'Column Not Equal to',
-    'length_equals':'Length Equals',
-    'length_not_equals':'Length Not Equals',
+    'length_equals':'Column Length Equals',
+    'length_not_equals':'Column Length Not Equals',
     'greater_than':'Greater than',
     'less_than': 'Less than',
     'greater_than_equal': 'Greater than equal',
@@ -23,9 +24,11 @@ operators = {
     'contains': 'Contains',
     'not_contains': 'Does not contains',
     'in_list': 'In list',
-    'not_in_list': 'Is Not in list',
-    'is_parent': 'Is Parent',
-    'is_child': 'Is Child',
+    'not_in_list': 'Is Not in List',
+    'in_column_list': 'In Column List',
+    'not_in_column_list': 'Is Not in Column List',
+    'has_parent': 'Has Parent',
+    'has_no_parent': 'Has No Parent',
     'wildcard_match': 'Is Like',
     'wildcard_not_match': 'Is Not Like',
     'distinct_combinations': 'Distinct Combinations',
