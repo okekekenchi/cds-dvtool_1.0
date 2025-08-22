@@ -77,13 +77,13 @@
         "code": "Q012",
         "name": "Same NSN different PNR",
         "description": "Nato Stock Number (NSN). Part Number Record (PNR). This query identifies where a record exists in table HA where the NSN is identical but the REFNUMHA codes differ.",
-        "config": {"sheets": [{"name": "HA"}], "joins": [], "conditions": [{"value_2": null, "column": "NSN", "operator": "non_distinct_combinations", "value_1": "refnumha", "logic": "And"}], "col_operations": [{"value_2": "NSN", "column": "fscnsnha", "operator": "merge", "value_1": "niinsnha"}]}
+        "config": {"sheets": [{"name": "HA", "col_operations": [{"value_2": "NSN", "column": "fscnsnha", "operator": "merge", "value_1": "niinsnha"}]}], "joins": [], "conditions": [{"value_2": null, "column": "NSN", "operator": "non_distinct_combinations", "value_1": "refnumha", "logic": "And"}], "col_operations": [{"value_2": "NSN", "column": "fscnsnha", "operator": "merge", "value_1": "niinsnha"}]}
       },
       {
         "code": "Q013",
         "name": "HB same PNR as HA",
         "description": "Table HB is the Additional Reference Number. Table HA is the Item Identification. This query identifies where a record exists in table HA but the child record in HB has the same REFNUMHA.",
-        "config": {"sheets": [{"name": "HA"}, {"name": "HB"}], "joins": [{"left_table": "HA", "join_type": "inner", "right_table": "HB", "on_cols": [{"left_column": "refnumha", "right_column": "refnumhb"}]}], "col_operations": [], "conditions": []}
+        "config": {"sheets": [{"name": "HA"}, {"name": "HB"}], "joins": [{"left_table": "HA", "join_type": "left", "right_table": "HB", "on_cols": [{"left_column": "refnumha", "right_column": "addrefhb"}]}], "col_operations": [], "conditions": []}
       },
       {
         "code": "Q014",
