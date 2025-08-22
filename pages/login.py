@@ -28,15 +28,14 @@ def main():
             else:
                 st.error("Invalid email or password")
 
-    st.markdown("""
-        <div style="text-align: center; margin-top: 20px;">
-            Don't have an account? <a href="/register" target="_self"
-            style="text-decoration:none; color:#e83757;">Register here</a>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("---")
+    col1, col2 = st.columns([1, 1], vertical_alignment="center")
+    with col1:
+        st.write("Don't have an account?")
+    with col2:
+        if st.button("Register here", use_container_width=True, help="Register"):
+            st.switch_page("pages/register.py")
     
-    st.write("")
-    st.write("")
     st.write("")
             
 if __name__ == "__main__":

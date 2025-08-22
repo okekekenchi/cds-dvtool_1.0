@@ -10,7 +10,6 @@ st.set_page_config(page_title="Register", page_icon="📝", layout="centered", i
 
 @guest
 def main():
-    st.session_state.current_page = config('route.home')
     load_css('assets/css/register.css')
     st.title("Sign Up")
 
@@ -19,7 +18,8 @@ def main():
     password = st.text_input("Password", type="password", placeholder="********",
                         help="At least 8 characters with 1 number, 1 uppercase, and 1 lowercase")
     confirm_password = st.text_input("Confirm Password", type="password", placeholder="********")
-
+    
+    st.write("")
     register_button = st.button("Register", type="primary", use_container_width=True)
 
     if register_button:
@@ -54,14 +54,14 @@ def main():
             for error in errors:
                 st.error(error)
 
-    # Login link
-    st.markdown("""
-        <div style="text-align: center; margin-top: 20px;">
-            Already have an account? <a href="/login" target="_self"
-            style="text-decoration:none; color:#e83757;">Login here</a>
-        </div>
-    """, unsafe_allow_html=True)
-    st.write("")
+    st.divider()
+    col1, col2 = st.columns([1, 1], vertical_alignment="center")
+    with col1:
+        st.write("Already have an account?")
+    with col2:
+        if st.button("Login here", use_container_width=True, help="Login"):
+            st.switch_page("pages/login.py")
+    
     st.write("")
             
 if __name__ == "__main__":
