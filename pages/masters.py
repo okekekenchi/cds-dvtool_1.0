@@ -211,7 +211,6 @@ def show_datatable(create_btn_placeholder):
                         
     with create_btn_placeholder.container():
         if not st.session_state.selected_row and st.session_state.selected_table:
-            st.markdown("<style>.m-top{margin-top:23px;}</style><div class='m-top'></div>", unsafe_allow_html=True)
             if st.button("New Record", key="create", icon=":material/add:"):
                 st.session_state.new_record = True
                 st.session_state.selected_row = {}
@@ -233,7 +232,7 @@ def main():
     st.write('')
     st.write('')
     
-    col1, col2, col3, col4 = st.columns([0.35, 0.3, 0.15, 0.2], vertical_alignment="center")
+    col1, col2, col3, col4 = st.columns([0.35, 0.3, 0.15, 0.2], vertical_alignment="bottom")
     with col1:
         exempt_tables = ['validation_checklists']
         table_names = [ name for name in get_table_names() if name not in exempt_tables ]
