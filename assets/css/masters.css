@@ -10,10 +10,6 @@
     left: -2px;
 }
 
-.st-emotion-cache-1nwdr1w h1 {
-    padding: 0px !important;
-}
-
 .stAppHeader {
     height: 20px !important;
     min-height: 40px;
@@ -65,14 +61,6 @@ iframe {
     font-weight: bold;
 }
 
-button[aria-label="Close"] {
+/* button[aria-label="Close"] {
     display: none !important;
-}
-
-button p {
-    font-size: 15px !important;
-    text-overflow: ellipsis;
-    width: 95px;
-    overflow: hidden;
-    white-space: nowrap;
-}
+} */

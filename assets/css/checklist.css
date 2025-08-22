@@ -10,10 +10,6 @@
     left: -2px;
 }
 
-.st-emotion-cache-1nwdr1w h1 {
-    padding: 0px !important;
-}
-
 .stAppHeader {
     height: 20px !important;
     min-height: 40px;
@@ -53,14 +49,6 @@ small {
     color: white !important;
 }
 
-.st-emotion-cache-1rwb540 {
-    display: flex !important;
-    height: 30px;
-    min-height: 31px;
-    justify-self: end !important;
-    width: -webkit-fill-available;
-}
-
 .st-emotion-cache-1t02cvl {
     align-content: end;
 }
@@ -69,9 +57,9 @@ small {
     font-weight: bold;
 }
 
-button[aria-label="Close"] {
+/* button[aria-label="Close"] {
     display: none !important;
-}
+} */
 
 .st-emotion-cache-8atqhb {
     justify-items: normal !important;

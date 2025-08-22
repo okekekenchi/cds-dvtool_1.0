@@ -7,6 +7,7 @@ from models.base import BaseModel
 system_tables = ["users","sessions","projects","validation_checklist"]
 system_fields = ["created_by", "created_at", "updated_at"]
 bool_fields = ["active"]
+textarea_fields = ["mb_desc", "desc", "description"]
 required_fields = [
     "task_type_id","task_type","meas_base","mb_desc","lsaconxb_char_length","lcnindxb",
     "taskcdca_2nd_char","task_code_interval","task_code_interval_desc","bh_freq","bh_freq_mb",

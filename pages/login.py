@@ -9,10 +9,14 @@ st.set_page_config(page_title="Login", page_icon=":material/key:", layout="cente
 @guest
 def main():
     load_css('assets/css/login.css')
+    st.write("")
+    st.write("")
     st.title("Sign In")
     
     email = st.text_input("Email", placeholder="Enter your email", key="login_email")
     password = st.text_input("Password", type="password", placeholder="Enter your password")
+    
+    st.write("")
     submit = st.button("Login", type="primary", use_container_width=True)
 
     if submit:
@@ -30,6 +34,10 @@ def main():
             style="text-decoration:none; color:#e83757;">Register here</a>
         </div>
     """, unsafe_allow_html=True)
+    
+    st.write("")
+    st.write("")
+    st.write("")
             
 if __name__ == "__main__":
     init_db()

@@ -49,6 +49,12 @@ def load_table(table_name:str) -> pd.DataFrame:
         st.error(f"Error loading table '{table_name}': {str(e)}")
         return pd.DataFrame()
 
+def get_sheet_columns(sheets:dict, sheet_name: str):
+    if sheet_name in sheets:
+        return list(sheets[sheet_name].columns)
+    else:
+        return []
+
 def get_file_hash(uploaded_file):
     """
     Generate hash for file content to detect changes
@@ -57,16 +63,11 @@ def get_file_hash(uploaded_file):
         return hashlib.md5(uploaded_file.getvalue()).hexdigest()
     except Exception as e:
         st.warning("Could not load file")
-
-def get_sheet_columns(sheets:dict, sheet_name: str):
-    if sheet_name in sheets:
-        return list(sheets[sheet_name].columns)
-    else:
-        return []
     
-def load_data(file_hash):
+def load_data(uploaded_file):
     try:
-        excel_file = load_workbook(st.session_state.uploaded_file.getvalue(), file_hash)
+        file_hash = get_file_hash(uploaded_file)
+        excel_file = load_workbook(uploaded_file.getvalue(), file_hash)
         
         if excel_file.sheet_names:
             sheets = { name: load_sheet(excel_file, sheet_name=name) 

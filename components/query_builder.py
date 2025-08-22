@@ -16,22 +16,20 @@ from utils import alert
 from util.project_utils import operators
 from components.list_source import set_list_source_string
 from services.query_builder_service import get_list_from_selected_source
-
-def on_list_type_changed():
-    if st.session_state.get("list_type") == "others":
-        set_list_source_string()
     
-def remove_condition(index):
+def remove_condition(configuration: dict, index: int):
     """Remove a condition from the list"""
     try:
-        st.session_state.config['conditions'].pop(index)
+        configuration['conditions'].pop(index)
+        st.rerun(scope='fragment')
     except Exception as e:
         st.toast('All cleared')
 
-def clear_conditions():
+def clear_conditions(configuration: dict):
     """Reset all conditions"""
-    if 'conditions' in st.session_state.config:
-        st.session_state.config['conditions'] = []
+    if 'conditions' in configuration:
+        configuration['conditions'] = []
+        st.rerun(scope='fragment')
     
 @st.dialog('List')
 def preview_list_from_selected_source(all_sheets: dict):
@@ -42,28 +40,28 @@ def preview_list_from_selected_source(all_sheets: dict):
         )
     )
 
-def set_logical_group():
+def set_logical_group(configuration: dict):
     nested_logic = st.session_state.get('nested_logic')
     
     if nested_logic in ['AND','OR']:
-        last_item = st.session_state.config['conditions'][-1]
+        last_item = configuration['conditions'][-1]
         if 'nested_logic' in last_item:
-            st.session_state.config['conditions'][-1]["nested_logic"] = nested_logic
+            configuration['conditions'][-1]["nested_logic"] = nested_logic
         else:
-            st.session_state.config['conditions'].append({
+            configuration['conditions'].append({
                 "nested_logic": nested_logic
             })    
 
-def show_selected_conditions():
-    if st.session_state.config['conditions']:
+def show_selected_conditions(configuration: dict):
+    if configuration['conditions']:
         columns = ['Column', 'Character', 'Operator', 'Value', 'Logic', 'Action']
         
         for i, col in enumerate(st.columns([0.23, 0.18, 0.2, 0.22, 0.15, 0.07])):
             with col:
                 st.write(f"**{columns[i]}**")
         
-        for i, cond in enumerate(st.session_state.config['conditions']):
-            col1, col2, col3, col4, col5, col6 = st.columns([0.23, 0.18, 0.2, 0.22, 0.15, 0.07])
+        for i, cond in enumerate(configuration['conditions']):
+            col1, col2, col3, col4, col5, col6 = st.columns([0.23, 0.18, 0.2, 0.22, 0.15, 0.07], vertical_alignment='center')
             
             if 'nested_logic' in cond:
                 with col1:
@@ -73,7 +71,7 @@ def show_selected_conditions():
                                     label_visibility="collapsed",
                                     index= 0 if cond['nested_logic'] == "AND" else 1
                                 )
-                    st.session_state.config['conditions'][i]["nested_logic"] = n_logic
+                    configuration['conditions'][i]["nested_logic"] = n_logic
             else:
                 with col1:
                     st.write(f"{cond['column']}")
@@ -91,21 +89,23 @@ def show_selected_conditions():
                     else:
                         st.write(f"{cond['value_1'] or 'N/A'}")
                 with col5:
-                    if i < len(st.session_state.config['conditions']) - 1:
-                        next_item = st.session_state.config['conditions'][i+1]
+                    if i < len(configuration['conditions']) - 1:
+                        next_item = configuration['conditions'][i+1]
                         if 'nested_logic' not in next_item:
                             st.write(f"{cond.get('logic', 'And')}")
             with col6:
-                st.button("", icon=":material/delete:", help="Delete query condition",
-                          key=f"remove_condition_{i}", on_click=remove_condition, args=(i,))
+                if st.button("", icon=":material/delete:", help="Delete query condition",
+                                key=f"remove_condition_{i}"):
+                    remove_condition(configuration, i)
     
-def build_query(all_sheets: dict, joined_df: pd.DataFrame) -> pd.DataFrame:
+def build_query(all_sheets: dict, configuration:dict, joined_df: pd.DataFrame) -> pd.DataFrame:
     col1, col2, col3, col4 = st.columns([3, 3, 3, 3]) # Add new query condition
     new = {}
     new['value_2'] = None
     list_type = None
     value_1_is_required = True
-    options = ([] if joined_df.empty else joined_df.columns.to_list())
+    # options = ([] if joined_df.empty else joined_df.columns.to_list())
+    options = joined_df.columns.to_list()
         
     with col1:
         new['column'] = st.selectbox("Column *", key="new_column", options=options)
@@ -147,9 +147,21 @@ def build_query(all_sheets: dict, joined_df: pd.DataFrame) -> pd.DataFrame:
             list_type = st.selectbox("List type *",
                                     options=['custom', 'others'],
                                     key="list_type",
-                                    format_func=lambda x: x.replace('_',' ').capitalize(),
-                                    on_change=on_list_type_changed
+                                    format_func=lambda x: x.replace('_',' ').capitalize()
                                 )
+
+            if st.session_state.list_type == "others":
+                col_1, col_2 = st.columns([0.7, 0.3], vertical_alignment='center')
+                
+                with col_1:
+                    if st.button(f"Configure ", key="set_list_src", icon=":material/settings:", help="Set list source"):
+                        set_list_source_string()
+                with col_2:
+                    if st.session_state.list_source_str:
+                        if st.button(f"", key=f"preview_list_source",icon=":material/visibility:", help="View list Source"):
+                            preview_list_from_selected_source(all_sheets)
+            else:
+                st.session_state.list_source_str = None
             
             if list_type == "custom":
                 new['value_1'] = st.text_input("Comma-separated values *", key="custom_list_string")
@@ -187,20 +199,9 @@ def build_query(all_sheets: dict, joined_df: pd.DataFrame) -> pd.DataFrame:
             
     with col4:
         new['logic'] = st.selectbox("", options=['And', 'Or'], key="new_logic")
-        
-        if st.session_state.list_source_str and list_type == "others":
-            st.markdown("<p style='margin-top:28px;'></p>", unsafe_allow_html=True)
-            
-            col_1, col_2, _ = st.columns([0.25,0.25, 0.5])
-            with col_1:
-                if st.button(f"", key=f"edit_list_source",icon=":material/edit:", help='Edit List Source'):
-                    on_list_type_changed()
-            with col_2:
-                if st.button(f"", key=f"preview_list_source",icon=":material/visibility:", help="View list Source"):
-                    preview_list_from_selected_source(all_sheets)
                     
     # Action buttons
-    _, col1, col2 = st.columns([0.7,0.2,0.05])
+    _, col1, col2 = st.columns([0.7,0.11,0.06], vertical_alignment='center')
     
     with col1:
         if st.button(f"Add", key="add_query_condition", icon=":material/add:"):            
@@ -212,20 +213,20 @@ def build_query(all_sheets: dict, joined_df: pd.DataFrame) -> pd.DataFrame:
                 alert("Fill all required fields")
                 return
             
-            if new not in st.session_state.config['conditions']:
-                st.session_state.config['conditions'].append(new)
-                st.rerun()
+            if new not in configuration['conditions']:
+                configuration['conditions'].append(new)
+                st.rerun(scope='fragment')
             else:
                 alert("You have already this condition")
             
     with col2:
-        st.button("", on_click=clear_conditions, icon=":material/refresh:",
-                  help="Clear all conditions", key="clear_conditions")
+        if st.button("", icon=":material/refresh:", help="Clear all conditions", key="clear_conditions"):
+            clear_conditions(configuration)
     
-    show_selected_conditions()
+    show_selected_conditions(configuration)
     
-    if st.session_state.config['conditions']:
-        col1, col2, _ = st.columns([0.2, 0.1, 0.8])
+    if configuration['conditions']:
+        col1, col2, _ = st.columns([0.2, 0.1, 0.8], vertical_alignment='center')
         with col1:
             st.selectbox(label="",
                         options=['--Select Logical Group--','AND', 'OR'],
@@ -236,5 +237,5 @@ def build_query(all_sheets: dict, joined_df: pd.DataFrame) -> pd.DataFrame:
         with col2:
             st.write('')
             st.write('')
-            st.button("", on_click=set_logical_group, icon=":material/add:",
-                  help="Group logic", key="add_group_logical_operator")
+            if st.button("", icon=":material/add:", help="Group logic", key="add_group_logical_operator"):
+                set_logical_group(configuration)

@@ -1,9 +1,10 @@
 import streamlit as st
 from util.auth_utils import authenticated
-from utils import get_model_class, system_fields, bool_fields, required_fields
+from utils import get_model_class, system_fields, bool_fields, required_fields, textarea_fields
 from components.side_nav import side_nav
 from loader.config_loader import config
 from loader.css_loader import load_css
+from database.migration import init_db
 from util.datatable import get_table_columns, get_table_names, get_table_data, delete_record
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 import pandas as pd
@@ -14,14 +15,10 @@ st.set_page_config(page_title="Masters", page_icon=":material/settings:", layout
 load_css('assets/css/project.css')
 
 def init_session_var():
-  if "selected_table" not in st.session_state:
-    st.session_state.selected_table = None
   if "edit_record" not in st.session_state:
     st.session_state.edit_record = None
   if "new_record" not in st.session_state:
     st.session_state.new_record = False
-  if "search_query" not in st.session_state:
-    st.session_state.search_query = None
   if "selected_row" not in st.session_state:
     st.session_state.selected_row = {}
   if "active_records" not in st.session_state:
@@ -36,10 +33,10 @@ def model():
     return get_model_class(table_class)
 
 def form_action(form_data, action: str):
-    col1, col2 = st.columns([0.5,0.5])
+    _, col1, col2 = st.columns([0.49, 0.31, 0.2])
     saved = False
     with col1:
-        if st.form_submit_button(f"{action.capitalize()} Record"):
+        if st.form_submit_button(f"{action.capitalize()} Record", disabled=is_system()):
             try:
                 with get_db() as db:
                     if action.lower() == "create":
@@ -68,13 +65,13 @@ def form_action(form_data, action: str):
 def delete_form():
     record_id = st.session_state.selected_row.get("id")
     
-    if st.session_state.selected_row.get("created_by") == "System":
+    if is_system():
         st.warning("This is a **system record** - you cannot delete.")
         return
                 
     st.warning(f"Are you sure you want to delete this record: {record_id}?")
     
-    col1, col2 = st.columns([0.5,0.5])
+    _, col1, col2 = st.columns([0.35, 0.4, 0.25])
     deleted = False
     with col1:
         if st.button("Confirm Delete", key="confirm_delete"):
@@ -100,19 +97,24 @@ def form_fields(data):
             current_value = st.session_state.edit_record.get(col) if "id" in data else None
             
             if col in bool_fields:
-                data[col] = st.checkbox(field_name(col), value=current_value or True)
+                data[col] = st.checkbox(field_name(col), value=current_value or True, disabled=is_system())
+            elif  col in textarea_fields:
+                data[col] = st.text_area(field_name(col), value=current_value, disabled=is_system(), max_chars=500)
             else:
-                data[col] = st.text_input(field_name(col), value=current_value)
+                data[col] = st.text_input(field_name(col), value=current_value, disabled=is_system(), max_chars=100)
     return data
+
+def is_system():
+    if st.session_state.edit_record:
+        return st.session_state.edit_record.get("created_by", None) == "System"
+    else:
+        return False
 
 @st.dialog("Edit Record")
 def edit_form():
     record_id = st.session_state.edit_record.get("id")
     
-    if st.session_state.edit_record.get("created_by") == "System":
-        st.warning("This is a **system record** - you cannot edit.")
-        return
-    elif not record_id:
+    if not record_id:
         st.warning("No ID column found in this table. Editing requires an 'id' column.")
         return
     else:
@@ -132,10 +134,106 @@ def create_form():
         form_data = form_fields(init_form_data)
         form_action(form_data, 'Create')
 
+def show_datatable(create_btn_placeholder):
+    action_placeholder = st.empty()
+    
+    # fetch data
+    # search_columns =  get_table_columns(st.session_state.selected_table) - system_fields
+    # search_columns
+    try:
+        df = get_table_data(st.session_state.selected_table,
+                            st.session_state.search_query,
+                            **{ "active": st.session_state.active_records })
+    except Exception as e:
+        st.error(f"Error loading data: {str(e)}")
+        return pd.DataFrame()
+
+    # Format Created By
+    users = pd.read_sql("SELECT id, full_name FROM users", engine)
+    user_map = dict(zip(users['id'], users['full_name']))
+    user_id = st.session_state.user_id
+    df['created_by'] = df['created_by'].map(lambda x: "Me" if x == user_id else user_map.get(x, "System")).fillna("System").replace("", "System")
+
+    if not df.empty:
+        # Configure tablez
+        gb = GridOptionsBuilder.from_dataframe(df)
+        gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=10)
+        gb.configure_default_column(editable=False, filterable=False, sortable=True, resizable=True, width=250)
+        gb.configure_grid_options(domLayout='normal')
+        
+        columns_to_hide = ["id", "active", "config"]
+        for column in columns_to_hide:
+            if column in df:
+                gb.configure_column(field=column, hide=True)
+            
+        gb.configure_column(field="created_by", header_name="Created by")
+        gb.configure_column(field="created_by", header_name="Created by")
+        gb.configure_column(field="created_at", header_name="Created at", valueFormatter="new Date(data.created_at).toLocaleString()")
+        gb.configure_column(field="updated_at", header_name="Updated at", valueFormatter="new Date(data.updated_at).toLocaleString()")
+        gb.configure_selection(selection_mode='single', use_checkbox=True)
+                    
+        # Display the grid
+        grid_response = AgGrid(
+            df,
+            gridOptions=gb.build(),
+            update_mode=GridUpdateMode.SELECTION_CHANGED,
+            theme='streamlit',
+            enable_enterprise_modules=True,
+            sidebar=True,
+            fit_columns_on_grid_load=True
+        )
+        
+        # Handle row selection for editing
+        selected_rows = grid_response.get("selected_rows", [])
+        
+        # Convert to list of dicts if it's a DataFrame
+        if hasattr(selected_rows, 'to_dict'):
+            selected_rows = selected_rows.to_dict('records')
+
+        # Now safely check if we have selected rows
+        if isinstance(selected_rows, list) and len(selected_rows) > 0:
+            st.session_state.selected_row = selected_rows[0]
+            st.session_state.edit_record = None
+            st.session_state.new_record = False
+        else:
+            st.session_state.selected_row = {}
+    else:
+        st.warning("No records found in this table.")
+        
+    # Show action buttons for selected row
+    with action_placeholder.container(): 
+        if st.session_state.selected_row:                
+            col1, col2, _ = st.columns([2,2, 6], vertical_alignment="center")
+            with col1:
+                if st.session_state.active_records and st.button("Edit Record", icon=":material/edit:"):
+                    st.session_state.edit_record = st.session_state.selected_row
+            with col2:
+                if st.session_state.selected_table not in ['tags']:
+                    st.button("Delete Record", icon=":material/delete:", on_click=delete_form)
+    with create_btn_placeholder.container():
+        if not st.session_state.selected_row and st.session_state.selected_table:
+            st.markdown("<style>.m-top{margin-top:23px;}</style><div class='m-top'></div>", unsafe_allow_html=True)
+            if st.button("New Record", key="create", icon=":material/add:"):
+                st.session_state.new_record = True
+                st.session_state.edit_record = None
+                st.session_state.selected_row = {}
+    
+    # Edit form
+    if  st.session_state.active_records and st.session_state.edit_record and st.session_state.selected_row:
+        edit_form()
+
+    # Create new record form
+    if st.session_state.new_record and not st.session_state.selected_row:
+        create_form()
+
+def reset_params():
+    st.session_state.edit_record = None
+    st.session_state.new_record = False
+    st.session_state.selected_row = {}
+
 @authenticated
 def main():
     st.title("Master Records")
-    st.session_state.current_page = "pages/masters.py"
     side_nav()
     init_session_var()
     
@@ -150,145 +248,44 @@ def main():
         options = { name: config(f'master.{name[:-1]}.label') for name in table_names }
 
         if options:
-            selected_table = st.selectbox(
+            st.selectbox(
                 "Select a Table:",
                 options=options.keys(),
                 format_func=lambda x: options[x],
-                key="table_select",
-                index=table_names.index(st.session_state.selected_table) if st.session_state.selected_table in table_names else 0
+                key="selected_table",
+                on_change=reset_params
             )
         else:
             st.warning("Error loading tables.")
             
     with col2:
-        st.session_state.search_query = st.text_input(
+        st.text_input(
             "Search Records:",
-            value=st.session_state.search_query,
             placeholder="Type to search...",
-            key="search_input",
-            help="Search across all columns"
+            key="search_query", help="Search across all columns"
         )
     with col3:
-        toggle_active_records = st.selectbox(
+        st.selectbox(
             "Show Records",
             options=[True, False],
             format_func=lambda x: "Active" if x else "Inactive",
             index=0 if st.session_state.active_records else 1,
-            key="active_records_selector",
+            key="active_records",
+            on_change=reset_params,
             help=f"Show {'active' if st.session_state.active_records else 'inactive'} records",
         )
     with col4:
        create_btn_placeholder = st.empty()
     
-        
-    if selected_table != st.session_state.selected_table:
-        st.session_state.selected_table = selected_table
-        st.session_state.edit_record = None
-        st.session_state.new_record = False
-        st.session_state.selected_row = {}
-        st.rerun()
-    
-    if toggle_active_records != st.session_state.active_records:
-        st.session_state.active_records = toggle_active_records
-        st.rerun()
-    
     st.divider()
 
-    # Main content area
     if st.session_state.selected_table:
-        action_placeholder = st.empty()
-        
-        # fetch data
-        # search_columns =  get_table_columns(st.session_state.selected_table) - system_fields
-        # search_columns
-        try:
-            df = get_table_data(st.session_state.selected_table,
-                                st.session_state.search_query,
-                                **{ "active": st.session_state.active_records })
-        except Exception as e:
-            st.error(f"Error loading data: {str(e)}")
-            return pd.DataFrame()
-    
-        # Format Created By
-        users = pd.read_sql("SELECT id, full_name FROM users", engine)
-        user_map = dict(zip(users['id'], users['full_name']))
-        user_id = st.session_state.user_id
-        df['created_by'] = df['created_by'].map(lambda x: "Me" if x == user_id else user_map.get(x, "System")).fillna("System").replace("", "System")
-
-        if not df.empty:
-            # Configure tablez
-            gb = GridOptionsBuilder.from_dataframe(df)
-            gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=10)
-            gb.configure_default_column(editable=False, filterable=False, sortable=True, resizable=True, width=250)
-            gb.configure_grid_options(domLayout='normal')
-            
-            columns_to_hide = ["id", "active", "config"]
-            for column in columns_to_hide:
-                if column in df:
-                    gb.configure_column(field=column, hide=True)
-                
-            gb.configure_column(field="created_by", header_name="Created by")
-            gb.configure_column(field="created_by", header_name="Created by")
-            gb.configure_column(field="created_at", header_name="Created at", valueFormatter="new Date(data.created_at).toLocaleString()")
-            gb.configure_column(field="updated_at", header_name="Updated at", valueFormatter="new Date(data.updated_at).toLocaleString()")
-            gb.configure_selection(selection_mode='single', use_checkbox=True)
-                        
-            # Display the grid
-            grid_response = AgGrid(
-                df,
-                gridOptions=gb.build(),
-                update_mode=GridUpdateMode.SELECTION_CHANGED,
-                theme='streamlit',
-                enable_enterprise_modules=True,
-                sidebar=True,
-                fit_columns_on_grid_load=True
-            )
-            
-            # Handle row selection for editing
-            selected_rows = grid_response.get("selected_rows", [])
-            
-            # Convert to list of dicts if it's a DataFrame
-            if hasattr(selected_rows, 'to_dict'):
-                selected_rows = selected_rows.to_dict('records')
-
-            # Now safely check if we have selected rows
-            if isinstance(selected_rows, list) and len(selected_rows) > 0:
-                st.session_state.selected_row = selected_rows[0]
-                st.session_state.edit_record = None
-                st.session_state.new_record = False
-            else:
-                st.session_state.selected_row = {}
-        else:
-            st.warning("No records found in this table.")
-         
-        # Show action buttons for selected row
-        with action_placeholder.container(): 
-            if st.session_state.selected_row:                
-                col1, col2, _ = st.columns([2,2, 6], vertical_alignment="center")
-                with col1:
-                    if st.session_state.active_records and st.button("Edit Record", icon=":material/edit:"):
-                        st.session_state.edit_record = st.session_state.selected_row
-                with col2:
-                    if st.session_state.selected_table not in ['tags']:
-                        st.button("Delete Record", icon=":material/delete:", on_click=delete_form)
-        with create_btn_placeholder.container():
-            if not st.session_state.selected_row and st.session_state.selected_table:
-                if st.button("New Record", key="create", icon=":material/add:"):
-                    st.session_state.new_record = True
-                    st.session_state.edit_record = None
-                    st.session_state.selected_row = {}
-        
-        # Edit form
-        if st.session_state.edit_record and st.session_state.selected_row:
-            edit_form()
-
-        # Create new record form
-        if st.session_state.new_record and not st.session_state.selected_row:
-            create_form()
-
+        show_datatable(create_btn_placeholder)
     else:
         st.info("Please select a table from the sidebar to begin.")
         
 if __name__ == "__main__":
+    init_db()
+    st.session_state.current_page = "pages/masters.py"
     main()
     

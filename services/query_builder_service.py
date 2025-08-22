@@ -76,9 +76,9 @@ def load_checklist(config: dict, all_sheets:dict) -> pd.DataFrame:
         pd.DataFrame: 
     """
     for sheet in config['sheets']:
-        if sheet not in all_sheets.keys():
-            st.error(f"Sheet {sheet} not found")
-            return pd.DataFrame
+        if sheet["name"] not in all_sheets.keys():
+            st.warning(f"Sheet {sheet["name"]} not found")
+            return pd.DataFrame()
      
     selected_sheets = run_column_operations(all_sheets, config['sheets'])
     
@@ -114,7 +114,7 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str|
     value = condition['value_1']
     value_2 = condition.get('value_2', None)
     
-    if column not in df:
+    if column not in df.columns:
         st.warning(f"Column {column} does not exist.")
         return ""
     
@@ -145,14 +145,20 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str|
         if value is None: return ""
         
         target_column = value
-        if target_column not in df:
+        if target_column not in df.columns:
             st.warning(f"Column {target_column} does not exist.")
             return ""
         
-        if not pd.api.types.is_numeric_dtype(df[target_column]):
-            st.warning(f"Target column '{target_column}' must contain numeric values for length comparison.")
+        try:
+            df[target_column] = pd.to_numeric(df[target_column], errors='raise')            
+        except ValueError:
+            st.warning(f"Target column '{target_column}' contains non-numeric values.")
             return ""
         
+        if not pd.api.types.is_numeric_dtype(df[target_column]):
+            st.warning(f"Target column '{target_column}' could not be converted to numeric.")
+            return ""
+
         return f"`{column}`.str.len() {operator_map[operator]} `{target_column}`"
     
     elif operator in ['column_equals','column_not_equals']:
@@ -160,7 +166,7 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str|
         
         # Get the target column to compare with
         target_column = condition['value_1']
-        if target_column not in df:
+        if target_column not in df.columns:
             st.warning(f"Column {target_column} does not exist.")
             return ""
         
@@ -257,7 +263,7 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str|
     elif operator in ['non_distinct_combinations', 'distinct_combinations']:
         if value is None: return ""
             
-        if value not in df:
+        if value not in df.columns:
             st.warning(f"Column {value} does not exist.")
             return ""
             
@@ -427,7 +433,7 @@ def get_op(op_str: str) -> str:
 
 def execute_query(all_sheets: dict, joined_df: pd.DataFrame, conditions: dict) -> pd.DataFrame:
     """
-    Rock-solid query execution that handles:
+    Query execution handles:
     - Complex string matching
     - Nested logical conditions
     - Position-specific wildcards

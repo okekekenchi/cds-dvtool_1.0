@@ -23,7 +23,7 @@
         "code": "Q003",
         "name": "H task without replacement spare",
         "description": "This query identifies where there is a record in table CA with a TASKCDCA starting 'H' but no child record exists in table CI for the same LSACONXB & ALTLCNXB.",
-        "config": {"sheets": [{"name": "CA"}, {"name": "CI"}, {"name": "HG"}], "joins": [{"left_table": "CA", "join_type": "inner", "right_table": "CI", "on_cols": [{"left_column": "lsaconxb", "right_column": "tsklcnci"}, {"left_column": "altlcnxb", "right_column": "tskalcci"}, {"left_column": "taskcdca", "right_column": "tsktcdci"}]}, {"left_table": "CI", "join_type": "inner", "right_table": "HG", "on_cols": [{"left_column": "procagci", "right_column": "cagecdxh"}, {"left_column": "prorefci", "right_column": "refnumha"}, {"left_column": "prolcnci", "right_column": "lsaconxb"}, {"left_column": "proalcci", "right_column": "altlcnxb"}]}], "col_operations": [], "conditions": [{"value_2": 0, "column": "taskcdca", "operator": "wildcard_match", "value_1": "H*", "logic": "And"}, {"value_2": 0, "column": "taskcdca", "operator": "wildcard_not_match", "value_1": "H?O*", "logic": "And"}, {"value_2": 0, "column": "smrcodhg", "operator": "wildcard_match", "value_1": "??O*", "logic": "And"}, {"nested_logic": "OR"}, {"value_2": null, "column": "taskcdca", "operator": "wildcard_match", "value_1": "H?O*", "logic": "And"}, {"value_2": null, "column": "smrcodhg", "operator": "wildcard_match", "value_1": "P*", "logic": "And"}, {"value_2": null, "column": "smrcodhg", "operator": "wildcard_not_match", "value_1": "??O*", "logic": "And"}]}
+        "config": {"sheets": [{"name": "CA"}, {"name": "CI"}], "joins": [{"left_table": "CA", "join_type": "a_left", "right_table": "CI", "on_cols": [{"left_column": "lsaconxb", "right_column": "tsklcnci"}, {"left_column": "altlcnxb", "right_column": "tskalcci"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "taskcdca", "operator": "starts_with", "value_1": "H", "logic": "And"}]}
       },
       {
         "code": "Q004",
@@ -65,7 +65,7 @@
         "code": "Q010",
         "name": "SMRCODHG - CA mismatch",
         "description": "This query identifies where a record exists in table CA but the 3rd character of the TASKCDCA i.e. the maintenance level does not align with the 4th & 5th characters of the SMRCODHG.",
-        "config": {"sheets": [{"name": "CA"}, {"name": "HG"}], "joins": [{"left_table": "CA", "join_type": "inner", "right_table": "HG", "on_cols": [{"left_column": "lsaconxb", "right_column": "lsaconxb"}, {"left_column": "altlcnxb", "right_column": "altlcnxb"}]}], "col_operations": [], "conditions": [{"value_2": 3, "column": "taskcdca", "operator": "column_not_equals", "value_1": "smrcodhg", "column_char": 3, "logic": "And"}]}
+        "config": {"sheets": [{"name": "CA"}, {"name": "CI"}, {"name": "HG"}], "joins": [{"left_table": "CA", "join_type": "inner", "right_table": "CI", "on_cols": [{"left_column": "lsaconxb", "right_column": "tsklcnci"}, {"left_column": "altlcnxb", "right_column": "tskalcci"}, {"left_column": "taskcdca", "right_column": "tsktcdci"}]}, {"left_table": "CI", "join_type": "inner", "right_table": "HG", "on_cols": [{"left_column": "procagci", "right_column": "cagecdxh"}, {"left_column": "prorefci", "right_column": "refnumha"}, {"left_column": "prolcnci", "right_column": "lsaconxb"}, {"left_column": "proalcci", "right_column": "altlcnxb"}]}], "col_operations": [], "conditions": [{"value_2": 0, "column": "taskcdca", "operator": "wildcard_match", "value_1": "H*", "logic": "And"}, {"value_2": 0, "column": "taskcdca", "operator": "wildcard_not_match", "value_1": "H?O*", "logic": "And"}, {"value_2": 0, "column": "smrcodhg", "operator": "wildcard_match", "value_1": "??O*", "logic": "And"}, {"nested_logic": "OR"}, {"value_2": null, "column": "taskcdca", "operator": "wildcard_match", "value_1": "H?O*", "logic": "And"}, {"value_2": null, "column": "smrcodhg", "operator": "wildcard_match", "value_1": "P*", "logic": "And"}, {"value_2": null, "column": "smrcodhg", "operator": "wildcard_not_match", "value_1": "??O*", "logic": "And"}]}
       },
       {
         "code": "Q011",
@@ -101,7 +101,7 @@
         "code": "Q016",
         "name": "CA without Predicted Times",
         "description": "Table CA is the Task Requirement. This query identifies where there is a record in table CA but the PREDMETCA & PRDMMHCA fields have not been populated.",
-        "config": {"sheets": [{"name": "CA"}], "joins": [], "col_operations": [], "conditions": [{"value_2": null, "column": "prdmetca", "operator": "is_null", "value_1": null, "logic": "And"}, {"value_2": null, "column": "prdmmhca", "operator": "is_null", "value_1": null, "logic": "And"}]}
+        "config": {"sheets": [{"name": "CA"}], "joins": [], "col_operations": [], "conditions": [{"value_2": null, "column": "prdmetca", "operator": "is_null", "value_1": null, "logic": "Or"}, {"value_2": null, "column": "prdmmhca", "operator": "is_null", "value_1": null, "logic": "Or"}]}
       },
       {
         "code": "Q017",
@@ -155,7 +155,7 @@
         "code": "Q025",
         "name": "Incorrect LCN indenture Code",
         "description": "Table XB is the LCN Indentured Item. This task identifies where there is a record in table XB but the LCNINDXB field does not align with the length of the LSACONXB.",
-        "config": {"sheets": [{"name": "XB"}, {"name": "xb_lcn_indenture"}], "joins": [{"left_table": "XB", "join_type": "left", "right_table": "xb_lcn_indenture", "on_cols": [{"left_column": "lcnindxb", "right_column": "lcnindxb"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "lsaconxb", "operator": "length_equals", "value_1": "lsaconxb_char_length", "logic": "And"}]}
+        "config": {"sheets": [{"name": "XB"}, {"name": "xb_lcn_indenture"}], "joins": [{"left_table": "XB", "join_type": "left", "right_table": "xb_lcn_indenture", "on_cols": [{"left_column": "lcnindxb", "right_column": "lcnindxb"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "lsaconxb", "operator": "length_not_equals", "value_1": "lsaconxb_char_length", "logic": "And"}]}
       },
       {
         "code": "Q026",

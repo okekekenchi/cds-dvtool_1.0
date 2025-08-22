@@ -88,7 +88,7 @@ def delete_checklist_form():
 
     st.warning(f"Are you sure you want to delete this record: {record_code}?")
     
-    col1, _, col2 = st.columns([0.35,0.3,0.35])
+    col1, _, col2 = st.columns([0.35,0.3,0.35], vertical_alignment='center')
     deleted = False
     with col1:
         if st.button("Delete", key="confirm_delete_checklist"):
@@ -154,7 +154,8 @@ def handle_selection_change(selected_rows: list[dict]):
                 st.session_state.selected_checklist = {}
             st.rerun()
  
-def checklist_view():
+@st.fragment
+def view_checklist():
     col1, _, col2 = st.columns([0.45, 0.37, 0.18], vertical_alignment="center")
     
     with col1:

@@ -58,3 +58,17 @@ a:hover {
     font-weight: bold !important;
 }
 
+
+.st-emotion-cache-r44huj h1 {
+    padding: 0px !important;
+}
+
+button {
+    display: flex !important;
+    height: 30px;
+}
+
+button[aria-selected="true"] div p {
+    font-weight: bold;
+    font-size: larger;
+}

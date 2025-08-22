@@ -61,6 +61,8 @@ def main():
             style="text-decoration:none; color:#e83757;">Login here</a>
         </div>
     """, unsafe_allow_html=True)
+    st.write("")
+    st.write("")
             
 if __name__ == "__main__":
     init_db()
