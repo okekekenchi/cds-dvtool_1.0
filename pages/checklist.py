@@ -1,12 +1,12 @@
-import importlib
-import sys
+# import importlib
+# import sys
 
-def reload_package(package_name: str):
-    for name in list(sys.modules):
-        if name == package_name or name.startswith(f"{package_name}."):
-            importlib.reload(sys.modules[name])
+# def reload_package(package_name: str):
+#     for name in list(sys.modules):
+#         if name == package_name or name.startswith(f"{package_name}."):
+#             importlib.reload(sys.modules[name])
 
-reload_package("components.checklist")
+# reload_package("components.checklist")
 
 import streamlit as st
 from loader.css_loader import load_css
