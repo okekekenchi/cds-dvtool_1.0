@@ -32,6 +32,6 @@ def get_model_class(model_name) -> BaseModel:
     class_name = ''.join([part.capitalize() for part in model_name.split('_')])
     return getattr(module, class_name)
         
-@st.dialog("Info")
+@st.dialog("Info", dismissible=True, on_dismiss="ignore")
 def alert(msg):
     st.warning(msg)

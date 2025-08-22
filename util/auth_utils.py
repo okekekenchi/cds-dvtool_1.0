@@ -19,10 +19,6 @@ def init_session_cookie():
     )
     
     if not cookies.ready():
-        # st.markdown(
-        #     "<h5 style='text-align:center;'>🔄 Loading, please wait...</h5>",
-        #     unsafe_allow_html=True
-        # )
         time.sleep(2)
         st.rerun()
     

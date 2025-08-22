@@ -9,14 +9,13 @@ from util.datatable import get_table_columns, get_table_names, get_table_data, d
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 import pandas as pd
 import time
+from utils import alert
 from database.database import get_db, engine
 
 st.set_page_config(page_title="Masters", page_icon=":material/settings:", layout="wide", initial_sidebar_state="expanded")
-load_css('assets/css/project.css')
+load_css('assets/css/masters.css')
 
 def init_session_var():
-  if "edit_record" not in st.session_state:
-    st.session_state.edit_record = None
   if "new_record" not in st.session_state:
     st.session_state.new_record = False
   if "selected_row" not in st.session_state:
@@ -33,7 +32,7 @@ def model():
     return get_model_class(table_class)
 
 def form_action(form_data, action: str):
-    _, col1, col2 = st.columns([0.49, 0.31, 0.2])
+    col1, _ = st.columns([2,1], vertical_alignment="center")
     saved = False
     with col1:
         if st.form_submit_button(f"{action.capitalize()} Record", disabled=is_system()):
@@ -48,7 +47,7 @@ def form_action(form_data, action: str):
                         st.error(f"Invalid action: {action}")
             except Exception as e:
                 st.error(f"Error saving record****: {e}")
-    with col2:
+
         if st.form_submit_button("Cancel"):
             st.session_state.new_record = False
             st.rerun()
@@ -56,31 +55,24 @@ def form_action(form_data, action: str):
     if saved:
         st.success(f"Record {action.lower()}d successfully!")
         st.session_state.new_record = False
-        st.session_state.edit_record = None
         st.session_state.selected_row = {}
         time.sleep(1.5)
         st.rerun()
 
-@st.dialog("Delete Record")
-def delete_form():
-    record_id = st.session_state.selected_row.get("id")
+@st.dialog("Delete Record", dismissible=True, on_dismiss="ignore")
+def delete_form(record_id):                
+    st.warning(f"Are you sure you want to delete record with ID: **{record_id}**?")
     
-    if is_system():
-        st.warning("This is a **system record** - you cannot delete.")
-        return
-                
-    st.warning(f"Are you sure you want to delete this record: {record_id}?")
-    
-    _, col1, col2 = st.columns([0.35, 0.4, 0.25])
+    col1, _ = st.columns([2, 1], vertical_alignment="center")
     deleted = False
     with col1:
-        if st.button("Confirm Delete", key="confirm_delete"):
+        if st.button("Confirm Delete", key="confirm_master_delete_btn", help="Delete record"):
             try:
                 delete_record(st.session_state.selected_table, record_id)
                 deleted = True
             except Exception as e:
                 st.error(f"Error deleting record: {e}")
-    with col2:
+
         if st.button("Cancel", key="cancel_delete"):
             st.session_state.selected_row = {}
             st.rerun()
@@ -93,8 +85,11 @@ def delete_form():
         
 def form_fields(data):
     for col in get_table_columns(st.session_state.selected_table):
-        if col != "id" and col not in system_fields:
-            current_value = st.session_state.edit_record.get(col) if "id" in data else None
+        if col != "id" and col not in system_fields: # Disallow editing of ID and system fields
+            if 'selected_row' in st.session_state:
+                current_value = st.session_state.selected_row.get(col) if "id" in data else None
+            else:
+                current_value = None
             
             if col in bool_fields:
                 data[col] = st.checkbox(field_name(col), value=current_value or True, disabled=is_system())
@@ -105,30 +100,23 @@ def form_fields(data):
     return data
 
 def is_system():
-    if st.session_state.edit_record:
-        return st.session_state.edit_record.get("created_by", None) == "System"
+    if st.session_state.selected_row:
+        return st.session_state.selected_row.get("created_by", None) == "System"
     else:
         return False
 
-@st.dialog("Edit Record")
-def edit_form():
-    record_id = st.session_state.edit_record.get("id")
+@st.dialog("Edit Record", dismissible=True, on_dismiss="rerun")
+def edit_form(record_id):
+    if is_system():
+        st.warning("You cannot edit a **System** record.")
     
-    if not record_id:
-        st.warning("No ID column found in this table. Editing requires an 'id' column.")
-        return
-    else:
-        with st.form(key="edit_form"):
-            init_form_data = { "id": st.session_state.edit_record.get("id") }
-            form_data = form_fields(init_form_data)
-            form_action(form_data, "Update")
+    with st.form(key="edit_form"):
+        init_form_data = { "id": record_id }
+        form_data = form_fields(init_form_data)
+        form_action(form_data, "Update")
 
-@st.dialog("Create Record")
+@st.dialog("Create Record", dismissible=True, on_dismiss="rerun")
 def create_form():
-    if st.session_state.selected_row:
-        st.warning("You have a record selected for update - unselect to create new records.")
-        return
-    
     with st.form(key="create_form"):
         init_form_data = { "created_by": st.session_state.user_id}
         form_data = form_fields(init_form_data)
@@ -193,7 +181,6 @@ def show_datatable(create_btn_placeholder):
         # Now safely check if we have selected rows
         if isinstance(selected_rows, list) and len(selected_rows) > 0:
             st.session_state.selected_row = selected_rows[0]
-            st.session_state.edit_record = None
             st.session_state.new_record = False
         else:
             st.session_state.selected_row = {}
@@ -201,33 +188,38 @@ def show_datatable(create_btn_placeholder):
         st.warning("No records found in this table.")
         
     # Show action buttons for selected row
-    with action_placeholder.container(): 
-        if st.session_state.selected_row:                
-            col1, col2, _ = st.columns([2,2, 6], vertical_alignment="center")
+    with action_placeholder.container():
+        if st.session_state.selected_row:
+            record_id = st.session_state.selected_row.get("id")
+            if not record_id:
+                st.warning("Invalid record ID")
+                return
+            
+            col1, _ = st.columns([1, 1], vertical_alignment="center")
             with col1:
-                if st.session_state.active_records and st.button("Edit Record", icon=":material/edit:"):
-                    st.session_state.edit_record = st.session_state.selected_row
-            with col2:
+                if (st.button("Edit Record", icon=":material/edit:", key="edit_master_btn", help="Edit record") and
+                    st.session_state.active_records):
+                    edit_form(record_id)
+
                 if st.session_state.selected_table not in ['tags']:
-                    st.button("Delete Record", icon=":material/delete:", on_click=delete_form)
+                    if st.button("Delete Record", icon=":material/delete:", key="delete_master_btn"):
+                        if is_system():
+                            alert("This is a **system record** - you cannot delete.")
+                            return
+                        
+                        delete_form(record_id)
+                        
     with create_btn_placeholder.container():
         if not st.session_state.selected_row and st.session_state.selected_table:
             st.markdown("<style>.m-top{margin-top:23px;}</style><div class='m-top'></div>", unsafe_allow_html=True)
             if st.button("New Record", key="create", icon=":material/add:"):
                 st.session_state.new_record = True
-                st.session_state.edit_record = None
                 st.session_state.selected_row = {}
-    
-    # Edit form
-    if  st.session_state.active_records and st.session_state.edit_record and st.session_state.selected_row:
-        edit_form()
-
-    # Create new record form
-    if st.session_state.new_record and not st.session_state.selected_row:
-        create_form()
+                create_form()
+        else:
+            st.session_state.new_record = False    
 
 def reset_params():
-    st.session_state.edit_record = None
     st.session_state.new_record = False
     st.session_state.selected_row = {}
 
@@ -241,7 +233,7 @@ def main():
     st.write('')
     st.write('')
     
-    col1, col2, col3, col4 = st.columns([0.35, 0.3, 0.15, 0.2])
+    col1, col2, col3, col4 = st.columns([0.35, 0.3, 0.15, 0.2], vertical_alignment="center")
     with col1:
         exempt_tables = ['validation_checklists']
         table_names = [ name for name in get_table_names() if name not in exempt_tables ]

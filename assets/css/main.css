@@ -72,3 +72,8 @@ button[aria-selected="true"] div p {
     font-weight: bold;
     font-size: larger;
 }
+
+.stColumn div {
+    flex-flow: row !important;
+    align-items: center;
+}
