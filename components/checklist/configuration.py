@@ -11,10 +11,12 @@ reload_package("services.join_service")
 reload_package("components.select_sheets")
 reload_package("components.join_sheets")
 reload_package("components.query_builder")
+reload_package("components.log_column")
 
 import streamlit as st
 from components.join_sheets import join_sheets
 from components.query_builder import build_query
+from components.log_column import log_column
 from components.select_sheets import select_sheets
 from services.join_service import get_joined_sheets
 from services.column_operation_service import run_column_operations
@@ -24,8 +26,8 @@ from services.query_builder_service import execute_query
 def configure_checklist(configuration: dict):
     if st.session_state.checklist.get('sheets'): # Question this
         st.markdown("""<h4> Configuration </h4>""", unsafe_allow_html=True)
-        tabs = ["Select Sheets *", "Join Sheets", "Build Query", "View Output"]
-        sheet_tab, join_tab, query_tab, output_tab = st.tabs(tabs, width='stretch')
+        tabs = ["Select Sheets *", "Join Sheets", "Build Query", "Log Column *", "View Output"]
+        sheet_tab, join_tab, query_tab, log_column_tab, output_tab = st.tabs(tabs, width='stretch')
         
         with sheet_tab:
             select_sheets(st.session_state.checklist['sheets'], configuration)
@@ -56,6 +58,12 @@ def configure_checklist(configuration: dict):
                 )
             else:
                 st.info("Select sheets/tables to begin building queries")
+                
+        with log_column_tab:
+            if len(selected_sheets):
+                log_column(configuration, joined_df)
+            else:
+                st.info("Select sheets/tables to log queries")
         
         with output_tab:
             if len(selected_sheets):

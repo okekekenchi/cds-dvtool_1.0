@@ -1,3 +1,4 @@
+import copy
 import json
 import time
 import pandas as pd
@@ -145,7 +146,7 @@ def handle_selection_change(selected_rows: list[dict]):
                 st.session_state.selected_checklist = {}
             st.rerun()
  
-@st.fragment
+
 def view_checklist():    
     col1, _, col2 = st.columns([0.45, 0.37, 0.18], vertical_alignment="center")
     

@@ -6,7 +6,7 @@ def reload_package(package_name: str):
         if name == package_name or name.startswith(f"{package_name}."):
             importlib.reload(sys.modules[name])
             
-reload_package("components.checklist_configuration")
+reload_package("components.checklist.configuration")
 reload_package("services.workbook_service")
 
 import copy
@@ -130,7 +130,7 @@ def save_checklist():
             
             if updated:
                 st.toast("Record Updated")
-                st.rerun(scope='fragment')
+                st.rerun()
             else:
                 alert('Error: Could not update record')
     except IntegrityError:

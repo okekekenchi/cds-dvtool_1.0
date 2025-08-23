@@ -6,7 +6,9 @@ def reload_package(package_name: str):
         if name == package_name or name.startswith(f"{package_name}."):
             importlib.reload(sys.modules[name])
 
-reload_package("components.checklist")
+reload_package("components.checklist.view")
+reload_package("components.checklist.create")
+reload_package("components.checklist.checklist")
 
 import streamlit as st
 from loader.css_loader import load_css
@@ -63,7 +65,7 @@ def main():
     with action:
         st.markdown("""
             <style>
-                .stColumn div { flex-flow: wrap !important; }
+                .stColumn div { flex-flow: wrap !important; align-content: flex-start; }
             </style>
         """, unsafe_allow_html=True)
         if item_selected():

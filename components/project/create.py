@@ -6,7 +6,6 @@ def reload_package(package_name: str):
     if name == package_name or name.startswith(f"{package_name}."):
       importlib.reload(sys.modules[name])
 
-reload_package("components.checklist")
 reload_package("services.workbook_service")
 reload_package("services.query_builder_service")
 
@@ -122,7 +121,7 @@ def select_valudation_rules():
     st.subheader("Selected Rules")
     st.write("")
     st.write("")
-    st.write(f"*Uncheck a rule to remove it* - ",
+    st.write(f"*Check a rule to remove it* - ",
              f"**[{len(st.session_state.selected_ids)} of {len(st.session_state.all_rules)} rules selected]**")
     st.divider()
     

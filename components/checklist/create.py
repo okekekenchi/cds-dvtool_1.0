@@ -6,7 +6,7 @@ def reload_package(package_name: str):
         if name == package_name or name.startswith(f"{package_name}."):
             importlib.reload(sys.modules[name])
 
-reload_package("components.checklist")
+reload_package("components.checklist.configuration")
 reload_package("services.workbook_service")
 
 import streamlit as st
