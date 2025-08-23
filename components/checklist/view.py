@@ -30,14 +30,14 @@ def clone_checklist_form(record_id):
     st.text_input("Name *", help="Name must be Unique",
                     key="clone_checklist_name", max_chars=100)
         
-    col1, _ = st.columns([1,1], vertical_alignment="center")
+    col1, col2 = st.columns([1,1], vertical_alignment="center")
     cloned = False
     error_message = None
     
     with col1:
-        if st.button("Clone", key="confirm_clone_checklist", help="Clone record"):
+        if st.button("Clone Record", key="confirm_clone_checklist", use_container_width=True):
             if not st.session_state.clone_checklist_code or not st.session_state.clone_checklist_name:
-                st.warning("Fill all required fields.")
+                error_message = "Fill all required fields."
             else:        
                 try:
                     with get_db() as db:
@@ -52,8 +52,9 @@ def clone_checklist_form(record_id):
                     error_message = f"The 'Code' and 'Name' provided must be unique"
                 except Exception as e:
                     error_message = f"Error cloning record: {e}"
-
-        if st.button("Cancel", key="cancel_clone_checklist"):
+    
+    with col2:
+        if st.button("Cancel", key="cancel_clone_checklist", use_container_width=True):
             st.session_state.selected_checklist = {}
             st.rerun()
 
@@ -79,7 +80,7 @@ def delete_checklist_form(record_id):
 
     st.warning(f"Are you sure you want to delete this record: {record_code}?")
     
-    col1, _ = st.columns([2, 1], vertical_alignment='center')
+    col1, col2 = st.columns([2, 1], vertical_alignment='center', use_container_width=True)
     deleted = False
     with col1:
         if st.button("Delete", key="confirm_delete_checklist"):
@@ -88,7 +89,7 @@ def delete_checklist_form(record_id):
                 deleted = True
             except Exception as e:
                 st.error(f"Error deleting record: {e}")
-
+    with col2:
         if st.button("Cancel", key="cancel_delete_checklist"):
             st.session_state.selected_checklist = {}
             st.rerun()
