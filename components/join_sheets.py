@@ -34,7 +34,7 @@ def show_joined_sheets(sheets: dict, configuration:dict):
             st.table(df)
         
         with col2:
-            if st.button("Conditions", key=f"join_conditions_{idx}"):
+            if st.button("Conditions", key=f"join_conditions_{idx}", help="Set join condition(s)"):
                 if join['left_table'] and join['right_table'] and join['join_type']:
                     join_conditions(sheets, configuration, idx, join)
                 else:
