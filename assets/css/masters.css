@@ -78,3 +78,7 @@ iframe {
 div[data-testid="stExpanderDetails"] {
     min-height: 200px;
 }
+
+.stColumn div {
+    flex-flow: row !important;
+}

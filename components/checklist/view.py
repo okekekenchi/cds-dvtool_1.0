@@ -2,6 +2,7 @@ import json
 import time
 import pandas as pd
 import streamlit as st
+from utils import alert
 from typing import Final, Literal
 from loader.css_loader import load_css
 from util.datatable import delete_record
@@ -19,14 +20,8 @@ STATUS_OPTIONS: Final[dict[int, str]] = {1: "Active", 0: "Inactive"}
 COLUMNS_TO_HIDE: Final[list[str]] = ["id", "active", "config", "tags"]
 
 @st.dialog("Clone Checklist")
-def clone_checklist_form():
-    record_id = st.session_state.selected_checklist.get("id")
-    
-    if not record_id:
-        st.warning('Record not selected.')
-        return
-    
-    st.write(f"Clone checklist with code: {st.session_state.selected_checklist.get('code')}")
+def clone_checklist_form(record_id):    
+    st.write(f"Clone checklist with code: **{st.session_state.selected_checklist.get('code')}**")
     
     st.text_input("Code *", help="Code must be Unique",
                     key="clone_checklist_code", max_chars=15)
@@ -34,12 +29,12 @@ def clone_checklist_form():
     st.text_input("Name *", help="Name must be Unique",
                     key="clone_checklist_name", max_chars=100)
         
-    col1, _, col2 = st.columns([0.35,0.3,0.35])
+    col1, _ = st.columns([1,1], vertical_alignment="center")
     cloned = False
     error_message = None
     
     with col1:
-        if st.button("Clone", key="confirm_clone_checklist"):
+        if st.button("Clone", key="confirm_clone_checklist", help="Clone record"):
             if not st.session_state.clone_checklist_code or not st.session_state.clone_checklist_name:
                 st.warning("Fill all required fields.")
                 return
@@ -58,7 +53,6 @@ def clone_checklist_form():
             except Exception as e:
                 error_message = f"Error cloning record: {e}"
 
-    with col2:
         if st.button("Cancel", key="cancel_clone_checklist"):
             st.session_state.selected_checklist = {}
             st.rerun()
@@ -73,22 +67,19 @@ def clone_checklist_form():
         time.sleep(2)
         st.rerun()
         
+def is_system_record():
+    if st.session_state.selected_checklist:
+        return st.session_state.selected_checklist.get("created_by") == "System"
+    else:
+        return False
+        
 @st.dialog("Delete Checklist")
-def delete_checklist_form():
-    record_id = st.session_state.selected_checklist.get("id")
+def delete_checklist_form(record_id):
     record_code = st.session_state.selected_checklist.get("code")
-    
-    if not record_id:
-        st.warning('Record not selected.')
-        return
-    
-    if st.session_state.selected_checklist.get("created_by") == "System":
-        st.warning("This is a **system record** - you cannot delete.")
-        return
 
     st.warning(f"Are you sure you want to delete this record: {record_code}?")
     
-    col1, _, col2 = st.columns([0.35,0.3,0.35], vertical_alignment='center')
+    col1, _ = st.columns([2, 1], vertical_alignment='center')
     deleted = False
     with col1:
         if st.button("Delete", key="confirm_delete_checklist"):
@@ -97,7 +88,7 @@ def delete_checklist_form():
                 deleted = True
             except Exception as e:
                 st.error(f"Error deleting record: {e}")
-    with col2:
+
         if st.button("Cancel", key="cancel_delete_checklist"):
             st.session_state.selected_checklist = {}
             st.rerun()
@@ -155,7 +146,7 @@ def handle_selection_change(selected_rows: list[dict]):
             st.rerun()
  
 @st.fragment
-def view_checklist():
+def view_checklist():    
     col1, _, col2 = st.columns([0.45, 0.37, 0.18], vertical_alignment="center")
     
     with col1:
@@ -224,11 +215,21 @@ def view_checklist():
     # # Show action buttons for selected row
     with action_placeholder.container(): 
         if st.session_state.selected_checklist:
-            col1, col2, _ = st.columns([1.75,1.75,6.5], vertical_alignment="center", gap="small")
+            record_id = st.session_state.selected_checklist.get("id")
+    
+            if not record_id:
+                st.warning('Record not selected.')
+                return
+            
+            col1, _ = st.columns([2, 1], vertical_alignment="center")
             with col1:
-                if st.button("Clone", icon=":material/content_copy:", key="colne_checklist_dialog"):
-                    clone_checklist_form()
-            with col2:
+                if st.button("Clone", icon=":material/content_copy:",
+                             key="colne_checklist_dialog", help="Clone record"):
+                    clone_checklist_form(record_id)
+                
                 if st.button("Delete", icon=":material/delete:", key="delete_checklist_dialog"):
-                    delete_checklist_form()
+                    if is_system_record():
+                        alert("This is a **system record** - you cannot delete.")
+                        return
+                    delete_checklist_form(record_id)
         

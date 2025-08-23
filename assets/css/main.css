@@ -74,6 +74,5 @@ button[aria-selected="true"] div p {
 }
 
 .stColumn div {
-    flex-flow: row !important;
     align-items: center;
 }

@@ -58,7 +58,7 @@ def load_tags():
     with get_db() as db:
         return Tag.where(db, ["id","name"])
     
-def form_inputs():        
+def form_inputs():  
     col11, col12 = st.columns([0.3, 0.7], vertical_alignment='center')
     with col11:
         st.session_state.checklist['code'] = st.text_input(

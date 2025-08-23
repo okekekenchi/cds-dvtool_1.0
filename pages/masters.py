@@ -35,7 +35,7 @@ def form_action(form_data, action: str):
     col1, _ = st.columns([2,1], vertical_alignment="center")
     saved = False
     with col1:
-        if st.form_submit_button(f"{action.capitalize()} Record", disabled=is_system()):
+        if st.form_submit_button(f"{action.capitalize()} Record", disabled=is_system_record()):
             try:
                 with get_db() as db:
                     if action.lower() == "create":
@@ -92,14 +92,14 @@ def form_fields(data):
                 current_value = None
             
             if col in bool_fields:
-                data[col] = st.checkbox(field_name(col), value=current_value or True, disabled=is_system())
+                data[col] = st.checkbox(field_name(col), value=current_value or True, disabled=is_system_record())
             elif  col in textarea_fields:
-                data[col] = st.text_area(field_name(col), value=current_value, disabled=is_system(), max_chars=500)
+                data[col] = st.text_area(field_name(col), value=current_value, disabled=is_system_record(), max_chars=500)
             else:
-                data[col] = st.text_input(field_name(col), value=current_value, disabled=is_system(), max_chars=100)
+                data[col] = st.text_input(field_name(col), value=current_value, disabled=is_system_record(), max_chars=100)
     return data
 
-def is_system():
+def is_system_record():
     if st.session_state.selected_row:
         return st.session_state.selected_row.get("created_by", None) == "System"
     else:
@@ -107,7 +107,7 @@ def is_system():
 
 @st.dialog("Edit Record", dismissible=True, on_dismiss="rerun")
 def edit_form(record_id):
-    if is_system():
+    if is_system_record():
         st.warning("You cannot edit a **System** record.")
     
     with st.form(key="edit_form"):
@@ -203,7 +203,7 @@ def show_datatable(create_btn_placeholder):
 
                 if st.session_state.selected_table not in ['tags']:
                     if st.button("Delete Record", icon=":material/delete:", key="delete_master_btn"):
-                        if is_system():
+                        if is_system_record():
                             alert("This is a **system record** - you cannot delete.")
                             return
                         
