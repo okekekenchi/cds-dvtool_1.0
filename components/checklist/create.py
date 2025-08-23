@@ -90,15 +90,14 @@ def form_inputs():
         st.session_state.checklist['active'] = st.checkbox("**Active**", key="checklist_active")
 
 def form_action():
-    _, col1, col2 = st.columns([0.65,0.25,0.1], vertical_alignment='center')
+    _, col1, col2 = st.columns([1,1,1], vertical_alignment='center')
     with col1:
-        if st.button("Save", key="save_checklist", icon=":material/save:"):
+        if st.button("Save", key="save_checklist", icon=":material/save:", use_container_width=True):
             save_checklist()
     with col2:
-        st.button("", key="reset_checklist_form",
-                  icon=":material/refresh:",
-                  help="Reset form",
-                  on_click=reset_form)
+        if st.button("Reset Form", key="reset_checklist_form",
+                  icon=":material/refresh:", use_container_width=True):
+            reset_form()
 
 def can_save() -> bool:
     if not st.session_state.uploaded_file:

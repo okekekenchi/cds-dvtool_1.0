@@ -32,10 +32,11 @@ def model():
     return get_model_class(table_class)
 
 def form_action(form_data, action: str):
-    col1, _ = st.columns([2,1], vertical_alignment="center")
+    col1, col2 = st.columns([1,1], vertical_alignment="center")
     saved = False
     with col1:
-        if st.form_submit_button(f"{action.capitalize()} Record", disabled=is_system_record()):
+        if st.button(f"{action.capitalize()} Record", use_container_width=True,
+                        disabled=is_system_record(), key="save_master"):
             try:
                 with get_db() as db:
                     if action.lower() == "create":
@@ -47,8 +48,8 @@ def form_action(form_data, action: str):
                         st.error(f"Invalid action: {action}")
             except Exception as e:
                 st.error(f"Error saving record****: {e}")
-
-        if st.form_submit_button("Cancel"):
+    with col2:
+        if st.button("Cancel", key="cancel_master", use_container_width=True):
             st.session_state.new_record = False
             st.rerun()
             
@@ -63,17 +64,17 @@ def form_action(form_data, action: str):
 def delete_form(record_id):                
     st.warning(f"Are you sure you want to delete record with ID: **{record_id}**?")
     
-    col1, _ = st.columns([2, 1], vertical_alignment="center")
+    col1, col2 = st.columns([1, 1], vertical_alignment="center")
     deleted = False
     with col1:
-        if st.button("Confirm Delete", key="confirm_master_delete_btn", help="Delete record"):
+        if st.button("Confirm Delete", key="confirm_master_delete_btn", use_container_width=True):
             try:
                 delete_record(st.session_state.selected_table, record_id)
                 deleted = True
             except Exception as e:
                 st.error(f"Error deleting record: {e}")
-
-        if st.button("Cancel", key="cancel_delete"):
+    with col2:
+        if st.button("Cancel", key="cancel_delete", use_container_width=True):
             st.session_state.selected_row = {}
             st.rerun()
             
@@ -110,17 +111,15 @@ def edit_form(record_id):
     if is_system_record():
         st.warning("You cannot edit a **System** record.")
     
-    with st.form(key="edit_form"):
-        init_form_data = { "id": record_id }
-        form_data = form_fields(init_form_data)
-        form_action(form_data, "Update")
+    init_form_data = { "id": record_id }
+    form_data = form_fields(init_form_data)
+    form_action(form_data, "Update")
 
 @st.dialog("Create Record", dismissible=True, on_dismiss="rerun")
 def create_form():
-    with st.form(key="create_form"):
-        init_form_data = { "created_by": st.session_state.user_id}
-        form_data = form_fields(init_form_data)
-        form_action(form_data, 'Create')
+    init_form_data = { "created_by": st.session_state.user_id}
+    form_data = form_fields(init_form_data)
+    form_action(form_data, 'Create')
 
 def show_datatable(create_btn_placeholder):
     action_placeholder = st.empty()
@@ -211,7 +210,7 @@ def show_datatable(create_btn_placeholder):
                         
     with create_btn_placeholder.container():
         if not st.session_state.selected_row and st.session_state.selected_table:
-            if st.button("New Record", key="create", icon=":material/add:"):
+            if st.button("New Record", key="create", icon=":material/add:", use_container_width=True):
                 st.session_state.new_record = True
                 st.session_state.selected_row = {}
                 create_form()

@@ -4,14 +4,14 @@ import time
 import pandas as pd
 import streamlit as st
 from utils import alert
-from typing import Final, Literal
+from typing import Final
 from loader.css_loader import load_css
 from util.datatable import delete_record
 from sqlalchemy.exc import IntegrityError
-from util.datatable import get_table_data
-from database.database import get_db, engine
+from database.database import get_db
 from models.validation_checklist import ValidationChecklist
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+from services.checklist_service import load_data_with_retry
 
 st.set_page_config(page_title="Masters", page_icon=":material/settings:", layout="wide", initial_sidebar_state="expanded")
 load_css('assets/css/project.css')
@@ -99,23 +99,6 @@ def delete_checklist_form(record_id):
         st.session_state.selected_checklist = {}
         time.sleep(2)
         st.rerun()
-
-def get_data_with_retry(table: str, query: str, max_retries: int = 3, **filters) -> pd.DataFrame:
-    """Helper function with retry logic for database operations"""
-    for attempt in range(max_retries):
-        try:
-            return get_table_data(table, query, **filters)
-        except Exception as e:
-            if attempt == max_retries - 1:
-                raise
-            time.sleep(1 * (attempt + 1))
-
-# @st.cache_data(ttl=3600)
-def get_user_mapping() -> dict:
-    """Cached user data lookup"""
-    users = pd.read_sql("SELECT id, full_name FROM users", engine)
-    return {**users.set_index('id')['full_name'].to_dict(), 
-            st.session_state.user_id: "Me"}
     
 def handle_selection_change(selected_rows: list[dict]):
     if 'selected_checklist' not in st.session_state:
@@ -150,6 +133,9 @@ def handle_selection_change(selected_rows: list[dict]):
 def view_checklist():    
     col1, _, col2 = st.columns([0.45, 0.37, 0.18], vertical_alignment="center")
     
+    if 'active_records' not in st.session_state:
+        st.session_state.active_records = 1
+    
     with col1:
         st.text_input(
             "", label_visibility="collapsed",
@@ -162,7 +148,8 @@ def view_checklist():
             "", options=STATUS_OPTIONS.keys(),
             format_func=lambda option: STATUS_OPTIONS[option],
             label_visibility="collapsed",
-            key="active_records"
+            key="active_records",
+            width="stretch"
         )
     
     st.divider()
@@ -174,19 +161,14 @@ def view_checklist():
     filters = filters if st.session_state.active_records in [0,1] else {}
     
     try:
-        df = get_data_with_retry(TABLE_NAME, st.session_state.checklist_search_query,
+        st.session_state.data = load_data_with_retry(TABLE_NAME, st.session_state.checklist_search_query,
                                  max_retries=3, **filters)
     except Exception as e:
         st.error(f"Error loading data: {str(e)}")
         return pd.DataFrame()
     
-    if df.empty: return st.warning("No records found")
-    
-    user_map = get_user_mapping()
-    df['created_by'] = df['created_by'].map(lambda x: user_map.get(x, "System"))
-    
     # Configure tables
-    gb = GridOptionsBuilder.from_dataframe(df)
+    gb = GridOptionsBuilder.from_dataframe(st.session_state.data)
     gb.configure_pagination(paginationAutoPageSize=False)
     gb.configure_default_column(editable=False, filterable=False, sortable=True, resizable=True, width=250)
     gb.configure_grid_options(domLayout='normal')
@@ -197,11 +179,11 @@ def view_checklist():
     gb.configure_selection(selection_mode='single', use_checkbox=True)
     
     for column in COLUMNS_TO_HIDE:
-        if column in df:
+        if column in st.session_state.data:
             gb.configure_column(field=column, hide=True)
     
     grid_response = AgGrid(
-        df,
+        st.session_state.data,
         gridOptions=gb.build(),
         update_mode=GridUpdateMode.SELECTION_CHANGED,
         theme='streamlit',

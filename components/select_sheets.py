@@ -67,7 +67,7 @@ def show_selected_sheets(all_sheets: dict, configuration: dict):
 def select_sheets(all_sheets: dict, configuration: dict):
     """Renders UI for selecting and managing sheets for validation"""
     
-    col1, col2, col3, _ = st.columns([0.5,0.17,0.5, 0.28])
+    col1, _, col2, col3 = st.columns([2.5,1.5,0.6,0.8], vertical_alignment="center")
     sheet_options = list(all_sheets.keys())
     selected_sheet_names = get_selected_sheet_names(configuration.get('sheets', []))
     
@@ -80,16 +80,16 @@ def select_sheets(all_sheets: dict, configuration: dict):
                         help="Select which sheets you want to include in validation"
                      )
     with col2:
-        st.markdown("<style>.m-top{margin-top:23px;}</style><div class='m-top'></div>", unsafe_allow_html=True)
-        if st.button("Add", key="add_sheets", icon=":material/add:") and new_sheets:
+        # st.markdown("<style>.m-top{margin-top:23px;}</style><div class='m-top'></div>", unsafe_allow_html=True)
+        if st.button("Add", key="add_sheets", icon=":material/add:", use_container_width=True) and new_sheets:
             for sheet_name in new_sheets:
                 if sheet_name not in selected_sheet_names:
                     add(configuration, sheet_name)
             st.rerun(scope='fragment')
             
     with col3:
-        st.markdown("<style>.m1-top{margin-top:28px;}</style><div class='m1-top'></div>", unsafe_allow_html=True)
-        if st.button("",key="clear_sheets",icon=":material/refresh:",help="Clear all selected sheets"):
+        if st.button("Clear Sheets", key="clear_sheets",
+                     icon=":material/refresh:", use_container_width=True):
             clear(configuration)
             
     show_selected_sheets(all_sheets, configuration)

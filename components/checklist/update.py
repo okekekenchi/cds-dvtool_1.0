@@ -10,8 +10,10 @@ reload_package("components.checklist.configuration")
 reload_package("services.workbook_service")
 
 import copy
+import pandas as pd
 import streamlit as st
 from utils import alert
+from services.checklist_service import load_data_with_retry
 from models.tag import Tag
 from database.database import get_db
 from sqlalchemy.exc import IntegrityError
@@ -25,6 +27,9 @@ config = {
     'col_operations': [],
     'conditions': []
 }
+
+from typing import Final
+TABLE_NAME: Final[str] = "validation_checklists"
 
 def init_session_var():
     selected_checklist = copy.deepcopy(st.session_state.selected_checklist)
@@ -92,13 +97,15 @@ def form_inputs():
         st.write('')
         st.session_state.checklist['active'] = st.checkbox("**Active**", key="checklist_active")
         
+        
 def form_action():
-    _, col1, col2 = st.columns([0.65,0.25,0.1], vertical_alignment='center')
+    _, col1, col2 = st.columns([1,1,1], vertical_alignment='center')
     with col1:
-        if st.button("Save", key="save_checklist", icon=":material/save:"):
+        if st.button("Save", key="save_checklist", icon=":material/save:", use_container_width=True):
             save_checklist()
     with col2:
-        if st.button("", key="reset_checklist_form", icon=":material/refresh:", help="Reset form"):
+        if st.button("Reset Form", key="reset_checklist_form",
+                        icon=":material/refresh:", use_container_width=True):
             st.session_state.reset_inputs = True
             reset_form()
             st.rerun(scope='fragment')
@@ -119,18 +126,32 @@ def can_save() -> bool:
 def save_checklist():
     try:
         if can_save():
-            updated = False
             form_fields = [ 'id','name','description','tags','active' ]
             checklist = { key:st.session_state.checklist.get(key) for key in form_fields }
             checklist['config'] = st.session_state.config
+            updated = False
             
             with get_db() as db:
                 ValidationChecklist.update(db, st.session_state.checklist['id'], checklist)
                 updated = True
             
             if updated:
-                st.toast("Record Updated")
-                st.rerun()
+                st.toast("Record Updated Successfully!")
+                
+                if 'data' in st.session_state:
+                    del st.session_state.data
+                    
+                st.session_state.data = load_data_with_retry(
+                    TABLE_NAME,
+                    st.session_state.get('checklist_search_query', '')
+                )
+                
+                st.session_state.selected_checklist = {
+                    **st.session_state.selected_checklist,
+                    **copy.deepcopy(checklist)
+                }
+                
+                st.rerun(scope='fragment')
             else:
                 alert('Error: Could not update record')
     except IntegrityError:
@@ -185,7 +206,7 @@ def update_checklist():
     if st.session_state.reset_form:
         init_form()
         
-    col1, col2 = st.columns([0.5, 0.5], border=True, vertical_alignment='center')
+    col1, col2 = st.columns([1,1], border=True, vertical_alignment='center')
     
     with col1:
         form_inputs()
