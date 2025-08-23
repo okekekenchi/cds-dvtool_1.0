@@ -38,21 +38,20 @@ def clone_checklist_form(record_id):
         if st.button("Clone", key="confirm_clone_checklist", help="Clone record"):
             if not st.session_state.clone_checklist_code or not st.session_state.clone_checklist_name:
                 st.warning("Fill all required fields.")
-                return
-        
-            try:
-                with get_db() as db:
-                    model = ValidationChecklist.find(db, record_id)
-                    model.clone(db, attr={
-                                    'code': st.session_state.clone_checklist_code,
-                                    'name': st.session_state.clone_checklist_name,
-                                    'created_by': st.session_state.user_id
-                                })
-                cloned = True
-            except IntegrityError:
-                error_message = f"The 'Code' and 'Name' provided must be unique"
-            except Exception as e:
-                error_message = f"Error cloning record: {e}"
+            else:        
+                try:
+                    with get_db() as db:
+                        model = ValidationChecklist.find(db, record_id)
+                        model.clone(db, attr={
+                                        'code': st.session_state.clone_checklist_code,
+                                        'name': st.session_state.clone_checklist_name,
+                                        'created_by': st.session_state.user_id
+                                    })
+                    cloned = True
+                except IntegrityError:
+                    error_message = f"The 'Code' and 'Name' provided must be unique"
+                except Exception as e:
+                    error_message = f"Error cloning record: {e}"
 
         if st.button("Cancel", key="cancel_clone_checklist"):
             st.session_state.selected_checklist = {}
