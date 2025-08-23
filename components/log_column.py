@@ -90,7 +90,7 @@ def render_selected_columns(configuration: dict, all_columns: list[str]):
             if st.checkbox(column, key=f"selected_{column}"):
                 unselect_column(configuration, idx)
                 
-        if st.button("Clear All", key="clear_all_cols_btn", use_container_width=True):
+        if st.button("Clear All Columns", key="clear_all_cols_btn", use_container_width=True, icon=":material/close:"):
             clear_all_columns(configuration)
     else:
         st.info("No column selected.")
