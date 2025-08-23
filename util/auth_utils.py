@@ -19,7 +19,7 @@ def init_session_cookie():
     )
     
     if not cookies.ready():
-        time.sleep(2)
+        time.sleep(3)
         st.rerun()
     
     return cookies
