@@ -9,26 +9,22 @@ from models.user import User
 from SessionManager import SessionManager
 from streamlit_cookies_manager import EncryptedCookieManager
 from loader.config_loader import config
-from typing import Optional
 
-def init_session_cookie() -> Optional[EncryptedCookieManager]:
-    """Initialize session state and encrypted cookies."""
-    if 'current_page' not in st.session_state:
-        st.session_state.current_page = None
-    
-   
 
-    if 'current_page' not in st.session_state:
-       st.session_state.current_page = None
+def init_session_cookie():
+    st.session_state.current_page = None
     cookies = EncryptedCookieManager(
         prefix = "cds_", 
         password = "38#$@__!@#$%^&*()_81~!!@",
-    )            
+    )
     
     if not cookies.ready():
-        with st.spinner("Loading session..."):
-            time.sleep(0.5)
-            st.rerun()
+        st.markdown(
+            "<h5 style='text-align:center;'>🔄 Loading, please wait...</h5>",
+            unsafe_allow_html=True
+        )
+        time.sleep(2)
+        st.rerun()
     
     return cookies
 
