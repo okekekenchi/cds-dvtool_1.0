@@ -17,9 +17,10 @@ def init_session_cookie():
         prefix = "cds_", 
         password = "38#$@__!@#$%^&*()_81~!!@",
     )
+    time.sleep(2)
     
     if not cookies.ready():
-        time.sleep(10)
+        time.sleep(5)
         st.rerun()
     
     return cookies
