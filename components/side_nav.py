@@ -21,10 +21,18 @@ def side_nav():
     with st.sidebar:
         st.markdown(f"""
             <style>
-            .sidebar .sidebar-content {{
-                background-color: {config('theme.secondary')};
-                color: white;
-            }}
+                .sidebar .sidebar-content {{
+                    background-color: {config('theme.secondary')};
+                    color: white;
+                }}
+                
+                .st-emotion-cache-p75nl5 {{
+                    width: 100%;
+                }}
+                
+                div[data-testid="stImageContainer"] {{
+                    align-items:center;
+                }}
             </style>
             """,
             unsafe_allow_html=True
