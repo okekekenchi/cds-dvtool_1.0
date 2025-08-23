@@ -9,21 +9,49 @@ from models.user import User
 from SessionManager import SessionManager
 from streamlit_cookies_manager import EncryptedCookieManager
 from loader.config_loader import config
+from typing import Optional
 
+def init_session_cookie() -> Optional[EncryptedCookieManager]:
+    """Initialize session state and encrypted cookies."""
+    
+    # Initialize session state only if not already set
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = None
+    
+    # Initialize cookies
+    try:
+        cookies = EncryptedCookieManager(
+            prefix="cds_", 
+            password="38#$@__!@#$%^&*()_81~!!@",  # Consider using environment variable
+        )
+        
+        # Wait for cookies to be ready with timeout
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            if cookies.ready():
+                return cookies
+            time.sleep(1)  # Shorter delay
+            
+        st.error("Failed to initialize cookies after multiple attempts")
+        return None
+        
+    except Exception as e:
+        st.error(f"Cookie initialization error: {e}")
+        return None
 
-def init_session_cookie():
-    st.session_state.current_page = None
-    cookies = EncryptedCookieManager(
-        prefix = "cds_", 
-        password = "38#$@__!@#$%^&*()_81~!!@",
-    )
-    time.sleep(2)
+# def init_session_cookie():
+#     st.session_state.current_page = None
+#     cookies = EncryptedCookieManager(
+#         prefix = "cds_", 
+#         password = "38#$@__!@#$%^&*()_81~!!@",
+#     )
+#     time.sleep(2)
     
-    if not cookies.ready():
-        time.sleep(5)
-        st.rerun()
+#     if not cookies.ready():
+#         time.sleep(5)
+#         st.rerun()
     
-    return cookies
+#     return cookies
 
 def logout(cookies=None):
     sessions = SessionManager()
