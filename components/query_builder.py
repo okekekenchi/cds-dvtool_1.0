@@ -99,6 +99,9 @@ def show_selected_conditions(configuration: dict):
                     remove_condition(configuration, i)
     
 def build_query(all_sheets: dict, configuration:dict, joined_df: pd.DataFrame) -> pd.DataFrame:
+    if "conditions" not in configuration:
+        configuration["conditions"] = []
+    
     col1, col2, col3, col4 = st.columns([3, 3, 3, 3]) # Add new query condition
     new = {}
     new['value_2'] = None

@@ -11,53 +11,42 @@ join_types = {
     "outer":"Outer Join"
 }
 
+import pandas as pd
+from pandas.api.types import infer_dtype
+
 def detect_exact_dtype(series: pd.Series) -> str:
-    """
-    Detect the exact data type of a pandas Series, especially for object columns.
+    """Detect the exact data type of a pandas Series using pandas' robust inference."""
+    # Use pandas' built-in, optimized inference engine first for object types.
+    inferred_type = infer_dtype(series, skipna=True)
+
+    # Map inferred types to your desired categories
+    if inferred_type in ['integer', 'mixed-integer']:
+        return 'integer'
+    if inferred_type in ['floating', 'decimal', 'mixed-integer-float']:
+        return 'float'
+    if inferred_type in ['datetime', 'datetime64', 'date']:
+        return 'datetime'
+    if inferred_type == 'boolean':
+        return 'boolean'
+    if inferred_type in ['string', 'unicode']:
+        return 'string'
+    if inferred_type == 'empty':
+        return 'empty'
     
-    Args:
-        series: pandas Series to analyze
-        
-    Returns:
-        str: One of 'string', 'integer', 'float', 'datetime', 'boolean', 'mixed', or 'unknown'
-    """
-    if not pd.api.types.is_object_dtype(series):
-        return str(series.dtype)
-    
-    # Check for datetime
+    # Fallback for complex types or if pandas' main dtypes are already specific
     if pd.api.types.is_datetime64_any_dtype(series):
         return 'datetime'
-    
-    # Try converting to different types to detect actual content
-    try:
-        # Check if it's numeric
-        numeric = pd.to_numeric(series, errors='raise')
-        if all(numeric == numeric.astype(int)):
-            return 'integer'
+    if pd.api.types.is_integer_dtype(series):
+        return 'integer'
+    if pd.api.types.is_float_dtype(series):
         return 'float'
-    except:
-        pass
-    
-    # Check for boolean
-    if pd.api.types.is_bool_dtype(series):
-        return 'boolean'
-    
-    # Check if it's string (after trying other types)
-    if pd.api.types.is_string_dtype(series):
-        return 'string'
-    
-    # Check for mixed types
-    unique_types = set(type(x) for x in series.dropna().head(100))
-    if len(unique_types) > 1:
-        return 'mixed'
-    
-    return 'unknown'
+        
+    return 'mixed' # If inference is still unclear (e.g., 'mixed')
 
 def handle_error_return() -> dict:
     return {
         'joined_df': pd.DataFrame(),
         'residual_df': pd.DataFrame(),
-        'total_records_failed': 0,
         'total_records': 0,
         'join_steps': 0
     }
@@ -137,14 +126,22 @@ def perform_joins(sheets: dict, joins: list[dict], return_residuals: bool = Fals
     
     current_data = None
     cumulative_residual = pd.DataFrame()
-    original_left_table = None
-    original_record_count = 0
+    original_left_table_name = joins[0]['left_table'] if joins else None
+    
+    if not original_left_table_name:
+        return handle_error_return()
+    
+    original_left_data = sheets.get(original_left_table_name).copy()
+    original_record_count = len(original_left_data)
+    
+    original_index_col = '__original_index__'
+    original_left_data[original_index_col] = original_left_data.index
     
     for i, join in enumerate(joins):
         # Validate join specification
         required_keys = {'left_table', 'right_table', 'join_type', 'on_cols'}
         if not all(k in join for k in required_keys) or not join['on_cols']:
-            st.warning(f"Invalid join specification in row {i+1}")
+            st.warning(f"You have not specified join condition for row {i+1}")
             return handle_error_return()
         
         on_cols = join['on_cols']
@@ -154,13 +151,7 @@ def perform_joins(sheets: dict, joins: list[dict], return_residuals: bool = Fals
         is_anti_join = join_type.startswith("a_")
         
         # Store the original left table for residual reconstruction
-        if i == 0:
-            original_left_table = left_table
-            original_left_data = sheets.get(left_table, pd.DataFrame())
-            original_record_count = len(original_left_data)
-        
-        # Get dataframes
-        left_df = current_data if current_data is not None else sheets.get(left_table)
+        left_df = original_left_data if i == 0 else current_data
         right_df = sheets.get(right_table)
         
         if left_df is None or right_df is None:
@@ -190,50 +181,45 @@ def perform_joins(sheets: dict, joins: list[dict], return_residuals: bool = Fals
                 indicator=True
             )
             
-            # Determine main result and residual for this join step
             if is_anti_join:
                 main_result = joined_with_indicator[joined_with_indicator['_merge'] == 'left_only'].copy()
-                step_residual = joined_with_indicator[joined_with_indicator['_merge'] != 'left_only'].copy()
+                step_residual = joined_with_indicator[joined_with_indicator['_merge'] == 'both'].copy()
             else:
-                main_result = joined_with_indicator[joined_with_indicator['_merge'] != 'left_only'].copy()
-                step_residual = joined_with_indicator[joined_with_indicator['_merge'] == 'left_only'].copy()
+                if base_join_type == 'inner':
+                    main_result = joined_with_indicator[joined_with_indicator['_merge'] == 'both'].copy()
+                    step_residual = joined_with_indicator[joined_with_indicator['_merge'] == 'left_only'].copy()
+                else: # left, right, outer
+                    main_result = joined_with_indicator.copy()
+                    step_residual = joined_with_indicator[joined_with_indicator['_merge'] == 'left_only'].copy()
 
             # Remove indicator column
-            main_result = main_result.drop('_merge', axis=1)
+            current_data = main_result.drop('_merge', axis=1)
             step_residual = step_residual.drop('_merge', axis=1)
             
-            # CRITICAL: Reconstruct original records for this step's residual
-            # We need to get back to the original left table records that failed
-            original_left_data = sheets[original_left_table] if original_left_table in sheets else left_df
-            
-            # Get the indices of failed records from the original left table
-            if i == 0:
-                # First join: residual indices are directly from original left table
-                failed_indices = step_residual.index
-            else:
-                # Subsequent joins: we need to trace back through the join chain
-                # This is complex - for now, we'll use a simpler approach
-                failed_indices = step_residual.index
+            failed_original_indices = step_residual[original_index_col]
             
             # Extract the original records that failed this join
-            original_failed_records = original_left_data[original_left_data.index.isin(failed_indices)]
-            
+            original_failed_records = original_left_data[original_left_data.index.isin(failed_original_indices)]
+    
             # Add to cumulative residual (avoid duplicates)
             if cumulative_residual.empty:
                 cumulative_residual = original_failed_records
             else:
                 # Only add records that aren't already in the cumulative residual
                 new_failed_indices = original_failed_records.index.difference(cumulative_residual.index)
-                new_failed_records = original_failed_records[original_failed_records.index.isin(new_failed_indices)]
-                cumulative_residual = pd.concat([cumulative_residual, new_failed_records], ignore_index=True)
-            
-            # Update current data for next join
-            current_data = main_result
+                cumulative_residual = pd.concat([cumulative_residual, original_failed_records.loc[new_failed_indices]])
             
         except Exception as e:
             st.error(f"Join failed between {left_table} and {right_table}: {str(e)}")
             return handle_error_return()
     
+    # Before returning, drop the helper column from the final results
+    if current_data is not None and original_index_col in current_data.columns:
+        current_data = current_data.drop(columns=[original_index_col])
+    if not cumulative_residual.empty and original_index_col in cumulative_residual.columns:
+        cumulative_residual = cumulative_residual.drop(columns=[original_index_col])
+
+
     return {
         'joined_df': current_data if current_data is not None else pd.DataFrame(),
         'residual_df': cumulative_residual,
@@ -254,17 +240,16 @@ def get_joined_sheets(sheets: dict, join_conditions: list[dict]) -> dict:
         pd.DataFrame: _description_
     """
     if sheets:
-        first_sheet= next(iter(sheets.values()))
-        return (
-            perform_joins(sheets, join_conditions)
-            if join_conditions else
-            handle_error_return() | {
+        if join_conditions:
+            return perform_joins(sheets, join_conditions)
+        else:
+            first_sheet = next(iter(sheets.values()))
+            return {
                 'joined_df': first_sheet,
-                'residual_df': first_sheet,
-                "total_records": len(first_sheet),
-                'total_records_failed': len(first_sheet),
+                'residual_df': pd.DataFrame(columns=first_sheet.columns),
+                'total_records': len(first_sheet),
+                'join_steps': 0
             }
-        )
     else:
         return handle_error_return()
 

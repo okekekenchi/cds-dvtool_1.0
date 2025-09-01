@@ -107,6 +107,7 @@ def run_query():
     st.toast("Validation Successful.", icon=":material/check_circle:")
     st.rerun()
   except Exception as e:
+    st.write(e)
     st.warning(f"Check validation rule combination {str(e)}")
 
 def log_error(results:list[dict]):

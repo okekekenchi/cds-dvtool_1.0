@@ -9,6 +9,7 @@ def reload_package(package_name: str):
 reload_package("components.checklist.configuration")
 reload_package("services.workbook_service")
 
+import copy
 import streamlit as st
 from utils import alert
 from models.tag import Tag
@@ -38,9 +39,9 @@ config = {
 
 def init_session_var():
     if 'checklist' not in st.session_state:
-        st.session_state.checklist = checklist
+        st.session_state.checklist = copy.deepcopy(checklist)
     if 'config' not in st.session_state:
-        st.session_state.config = config
+        st.session_state.config = copy.deepcopy(config)
     
     if 'list_type' not in st.session_state:
         st.session_state.list_type = None
@@ -116,8 +117,8 @@ def save_checklist():
     try:
         if can_save():
             created = False
-            checklist = st.session_state.checklist
-            checklist['config'] = st.session_state.config
+            checklist = copy.deepcopy(st.session_state.checklist)
+            checklist['config'] = copy.deepcopy(st.session_state.config)
             checklist['created_by'] = st.session_state.user_id
             
             for key in ['workbook','sheets']:

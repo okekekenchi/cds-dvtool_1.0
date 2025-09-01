@@ -3,13 +3,22 @@ from services.workbook_service import get_sheet_columns
 from services.join_service import join_types
 
 
-def delete_join_condition(configuration: dict, join_idx, condition_idx):
+def delete_join_condition(configuration: dict, join_idx: int, condition_idx):
     del configuration['joins'][join_idx]['on_cols'][condition_idx]
     st.rerun(scope='fragment')
+
+def add_join_condition(configuration: dict, join_idx: int, on_col):
+    configuration['joins'][join_idx]['on_cols'].append(on_col)
+    st.rerun(scope='fragment')
+    
+def join_type_changed(configuration: dict, join_idx: int):
+    configuration['joins'][join_idx]["join_type"] = st.session_state.join_type_condition
     
 @st.dialog("Join Conditions", width='large', dismissible=True, on_dismiss='rerun')
 def join_conditions(sheets:dict, configuration: dict, idx:int, join:dict):
     """multi-column join"""
+    # if "join_type_condition" not in st.session_state:
+    #     join_type_condition
     col1, col2, col3, _ = st.columns([0.15, 0.3, 0.35, 0.2])
 
     with col1:
@@ -18,14 +27,16 @@ def join_conditions(sheets:dict, configuration: dict, idx:int, join:dict):
         st.write(f"Left table: **{join['left_table']}**")
         
     with col2:
-        join_type = st.selectbox(label='',
-                        placeholder="Join Type",
-                        options=join_types.keys(),
-                        index=list(join_types.keys()).index(join['join_type']),
-                        help="Select which join type to implement",
-                        format_func=lambda x: join_types[x],
-                        key="join_type_condition"
-                    )
+        st.selectbox(label='',
+            placeholder="Join Type",
+            options=list(join_types.keys()),
+            index=list(join_types.keys()).index(join['join_type']),
+            help="Select which join type to implement",
+            format_func=lambda x: join_types[x],
+            key="join_type_condition",
+            on_change=lambda: join_type_changed(configuration, idx)
+        )
+            
     with col3:
         st.write('')
         st.write('')
@@ -58,8 +69,9 @@ def join_conditions(sheets:dict, configuration: dict, idx:int, join:dict):
         if st.button("Add", key="add_join_columns", icon=":material/add:") and on_col:
             if on_col['right_column'] and on_col['left_column']:
                 if on_col not in configuration['joins'][idx]['on_cols']:
-                    configuration['joins'][idx]['on_cols'].append(on_col)
-                    st.rerun(scope='fragment')
+                    # configuration['joins'][idx]['on_cols'].append(on_col)
+                    # st.rerun(scope='fragment')
+                    add_join_condition(configuration, idx, on_col)
                 else:
                     error_msg = "Columns have already been joined"
             else:

@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+from datetime import datetime, timedelta, timezone
 import streamlit as st
 from typing import Final
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
@@ -7,7 +8,7 @@ from services.checklist_service import load_data_with_retry
 
 TABLE_NAME: Final[str] = "project_logs"
 STATUS_OPTIONS = { 1: "Show", 0: "Hide" }
-COLUMNS_TO_HIDE: Final[list[str]] = ["id", "data", "description"]
+COLUMNS_TO_HIDE: Final[list[str]] = ["id", "data", "description","updated_at"]
 
 def handle_selection_change(selected_rows: list[dict]):
     if 'selected_log' not in st.session_state:
@@ -27,13 +28,13 @@ def handle_selection_change(selected_rows: list[dict]):
         if st.session_state.selected_log.get('id') != selected_log['id']:
             st.session_state.selected_log = selected_log
             st.session_state.toggle_view = True
-            st.rerun(scope="fragment")
+            st.rerun()
     else:
         if st.session_state.selected_log != {}:
             if st.session_state.selected_log.get('id'):
                 st.session_state.selected_log = {}
                 st.session_state.toggle_view = False
-            st.rerun(scope="fragment")
+            st.rerun()
 
 def findRule(rule_id):
   if st.session_state.all_rules:
@@ -89,24 +90,33 @@ def project_detail():
 	""", unsafe_allow_html=True)
 	st.divider()
  
-	description = ""
 	log = st.session_state.selected_log
 	st.write(f"**File name:** {log["file_name"]}")
 	st.write(f"**Type:** {log["file_type"]}")
 	st.write(f"**Version:** {log["version"]}")
+ 
+	timestamp = log["created_at"]
+	dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
+	dt_utc = dt.replace(tzinfo=timezone.utc)  # Mark as UTC time
+	dt_local = dt_utc.astimezone()  # Convert to local timezone
+
+	st.write(f"**Run on:** {dt_local.strftime("%B %d, %Y at %I:%M %p")}")
 	st.write(f"**Rules Applied:** ")
 
 	for idx, data in enumerate(log["data"]):
 		rule = findRule(data["rule_id"])
-		description += f"""
+		st.write(f"""
 			↓\n
 			**Rule {idx + 1}: {rule['name']}**\n
 				→ Total: {data["total_records"]} records\n
 				→ Passed: {data["total_records"] - len(data["failed_df"])} records\n
 				→ Failed: {len(data["failed_df"])} records\n
-		"""
-		st.write(description)
-		st.dataframe(data["failed_df"])
+		""")
+
+		if len(data["failed_df"]):
+			st.dataframe(data["failed_df"])
+		else:
+			st.info("There were no failed records for this run")
 
 @st.fragment
 def project_log():		

@@ -34,7 +34,11 @@ def clear(configuration: dict):
     st.rerun(scope='fragment')
     
 def add(configuration: dict, sheet_name: str):
-    configuration["sheets"].append({ "name": sheet_name, "col_operations":[] })
+    if "sheets" in configuration:
+        configuration["sheets"].append({ "name": sheet_name, "col_operations":[] })
+        st.toast("Sheet(s) added")
+    else:
+        configuration["sheets"] = []
 
 def show_selected_sheets(all_sheets: dict, configuration: dict):
     selected_sheet_names = get_selected_sheet_names(configuration.get('sheets', []))

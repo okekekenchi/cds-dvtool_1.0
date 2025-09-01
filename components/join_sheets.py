@@ -90,7 +90,11 @@ def join_sheets(sheets: dict, configuration: dict):
                     return
                 
                 if new_join not in configuration['joins']:
-                    configuration['joins'].append(new_join)
+                    if "joins" in configuration:
+                        configuration['joins'].append(new_join)
+                        st.rerun(scope='fragment')
+                    else:
+                        configuration['joins'] = []
                 else:
                     alert("You have already joined these sheets")
             else:
