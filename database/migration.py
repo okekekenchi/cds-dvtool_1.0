@@ -8,6 +8,7 @@ from models.ca_scheduled_task import CaScheduledTask
 from models.ca_task_code_interval import CaTaskCodeInterval
 from models.ca_task_code_vs_task_id import CaTaskCodeVsTaskId
 from models.xb_lcn_indenture import XbLcnIndenture
+from models.project_log import ProjectLog
 from models.tag import Tag
 from utils import get_model_class
 

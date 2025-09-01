@@ -136,7 +136,7 @@ def save_checklist():
                 updated = True
             
             if updated:
-                st.toast("Record Updated Successfully!")
+                st.toast("Record Updated Successfully!", icon=":material/check_circle:")
                 
                 if 'data' in st.session_state:
                     del st.session_state.data

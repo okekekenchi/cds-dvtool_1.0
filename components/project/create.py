@@ -1,5 +1,6 @@
 import importlib
 import sys
+import time
 
 def reload_package(package_name: str):
   for name in list(sys.modules):
@@ -9,13 +10,17 @@ def reload_package(package_name: str):
 reload_package("services.workbook_service")
 reload_package("services.query_builder_service")
 
+import os
+import copy
 import pandas as pd
 import streamlit as st
 from utils import alert
+from util.env import EnvHelper
 from database.database import get_db
 from services.workbook_service import load_data
 from services.query_builder_service import load_checklist
 from models.validation_checklist import ValidationChecklist
+from models.project_log import ProjectLog
 
 def init_session_var():
   if 'all_rules' not in st.session_state:
@@ -29,22 +34,32 @@ def init_session_var():
 def reset_form():
   return
 
-def upload_workbook():
+def file_changed():
+  return
+
+def upload_workbook()-> dict:
+  """
+  Allows users to select a workbook file for validation.
+  Joins the master records to the sheets in the workbook.
+  Assigns the joined dataframes to the session variable.
+
+  Returns:
+      file: byte
+  """
+  st.markdown("<div><h6>Select Workbook (Excel File) *</h6></div>", unsafe_allow_html=True)
   st.file_uploader(
-    "Select Workbook (Excel File) *",
+    "",
     type=["xlsx", "xls"], key="project_file",
-    help="Upload an Excel workbook containing your data sheets.",
+    label_visibility="collapsed",
+    on_change=file_changed,
   )
-  
-  # st.markdown("<style>button { max-width:150px; }</style>", unsafe_allow_html=True)
-  
+    
   if st.session_state.project_file:
     file, sheets, tables = load_data(st.session_state.project_file)
-    st.session_state['all_sheets'] = sheets | tables
-  else:            
+    return sheets | tables
+  else:
     st.warning("Select file to continue")
-      
-  return st.session_state.project_file
+    return {}
 
 def select_rule(id):
   st.session_state.selected_ids.append(id)
@@ -54,26 +69,126 @@ def unselect_rule(idx):
   del st.session_state.selected_ids[idx]
   st.rerun(scope="fragment")
   
+def can_not_save():
+  return not (
+    st.session_state.project_file and
+    st.session_state.selected_ids
+  )
+  
 def run_query():
-  if not st.session_state.selected_ids:
-    alert("No rule selected.")
-    
-  result_df = pd.DataFrame()
-  
-  for idx, rule_id in enumerate(st.session_state.selected_ids):
-    for rule in st.session_state.all_rules:
-      if rule["id"] == rule_id:
-        if idx == 0:
-          result_df = load_checklist(rule["config"],  st.session_state.all_sheets)
-        else:
-          result_df = load_checklist(rule["config"],  { f'result_{idx}': result_df })
-  
-  st.write(result_df)
-  return result_df
+  results = []
+  # First rule: validate against original sheets
+  input_sheets = copy.deepcopy(st.session_state.all_sheets)
 
-@st.fragment
-def select_valudation_rules():
-  unselected_container, selected_container = st.columns([0.5,0.5])
+  
+  try:
+    for idx, rule_id in enumerate(st.session_state.selected_ids):
+      for rule in st.session_state.all_rules:
+        if rule["id"] == rule_id:          
+          # if idx != 0:
+            # Subsequent rules: validate against passed records from previous rule
+            # Create a temporary sheet structure for the validation
+            # input_sheets = {"passed_records": result_dfs[idx-1]["passed_df"]}
+          
+          result = dict(load_checklist(rule["config"], input_sheets, "all"))
+          log = rule["config"].get("log", {})
+
+          results.append({
+            "rule_id": rule_id,
+            "total_records": result["total_records"],
+            "join_steps": result["join_steps"],
+            "failed_df": result["failed_df"][log.get("columns", [])].to_dict(orient='records')
+          })
+          
+          break
+      
+    st.session_state.validation_results = results
+    log_error(results)
+    st.toast("Validation Successful.", icon=":material/check_circle:")
+    st.rerun()
+  except Exception as e:
+    st.warning(f"Check validation rule combination {str(e)}")
+
+def log_error(results:list[dict]):
+  file_name = st.session_state.project_file.name
+  env = EnvHelper()
+  
+  project_log = {
+    "name": f"{file_name}_{time.time()}",
+    "file_name": os.path.splitext(file_name)[0],
+    "file_type": os.path.splitext(file_name)[1].lower(),
+    "version": env("config.client.version"),
+    "data": results,
+    "created_by": st.session_state.user_id
+  }
+  
+  try:
+    with get_db() as db:
+      ProjectLog.create(db, **project_log)
+  except Exception as ex:
+    st.warning(f"Unable to save log {str(ex)}")
+
+def render_available_rules():
+  """Render the available columns section"""
+  available_rules = [
+    rule for rule in st.session_state.all_rules
+    if rule["id"] not in st.session_state.selected_ids
+  ]
+
+  st.markdown("""
+    <div style='display: flex; justify-content: space-between; margin-bottom: 10px;'>
+        <h5>Available Columns</h5>
+        <span style='font-size: 0.9em; color: #666; height: 33px;'>
+            {}/{} columns
+        </span>
+    </div>
+  """.format(len(available_rules), len(st.session_state.all_rules)), unsafe_allow_html=True)
+  st.divider()
+  
+  st.text_input(placeholder="Search and click enter", label_visibility="collapsed", label="", key="search_rule")
+  available_rules = [
+    rule for rule in available_rules
+    if st.session_state.search_rule.lower() in str(rule["name"]).lower()
+  ]
+  
+  if available_rules:
+    for rule in available_rules:
+      if st.checkbox(f"{rule['code']} - {rule['name']}", key=f"avail_{rule['id']}", value=False):
+        select_rule(rule["id"])
+  else:
+    st.info("No available rule.")
+  
+  st.write("")
+  st.write("")
+  st.write("___")
+  
+def render_selected_rules():
+  """Render the selected columns section"""
+  st.markdown("""
+      <div style='display: flex; justify-content: space-between; margin-bottom: 10px;'>
+          <h5>Selected Columns</h5>
+          <span style='font-size: 0.9em; color: #666; height: 33px;'>
+              {}/{} columns
+          </span>
+      </div>
+  """.format(len(st.session_state.selected_ids), len(st.session_state.all_rules)), unsafe_allow_html=True)
+  st.divider()
+  
+  if st.session_state.selected_ids:
+    for idx, rule_id in enumerate(st.session_state.selected_ids):
+      for rule in st.session_state.all_rules:
+        if rule["id"] == rule_id:
+          if st.checkbox(f"{rule['code']} - {rule['name']}", key=f"selected_{rule['id']}"):
+            unselect_rule(idx)
+  else:
+    st.info("No rule selected.")
+    
+  st.write("")
+  st.write("")
+  st.write("___")
+
+def select_validation_rules():
+  available_container, selected_container = st.columns([0.5,0.5])
   
   st.markdown("""
     <style>
@@ -81,9 +196,10 @@ def select_valudation_rules():
         height: 500px;
         overflow: auto;
         background: rgb(240, 242, 246);
-        padding: 5px 20px 20px 20px;
+        padding: 10px 20px 20px 20px;
         border-radius: 1.5em;
       }
+      
       input {
         background: white !important;
       }
@@ -91,64 +207,28 @@ def select_valudation_rules():
   """
   , unsafe_allow_html=True)
   
-  with unselected_container:
-    available_rules = [
-      rule for rule in st.session_state.all_rules
-      if rule["id"] not in st.session_state.selected_ids
-    ]
-  
-    st.subheader("Available Rules")
-    st.write('')
-    st.write('')
-    st.write(f"*Check a rule to select it* -  ",
-             f"**[{len(available_rules)} of {len(st.session_state.all_rules)} rules]**")
-    st.divider()
-    
-    st.text_input(placeholder="Search and click enter", label_visibility="collapsed", label="", key="search_rule")
-    available_rules = [
-      rule for rule in available_rules
-      if st.session_state.search_rule.lower() in str(rule["name"]).lower()
-    ]
-    
-    if available_rules:
-      for rule in available_rules:
-        if st.checkbox(f"{rule['code']} - {rule['name']}", key=f"avail_{rule['id']}", value=False):
-          select_rule(rule["id"])
-    else:
-      st.info("No available rule.")
+  with available_container:
+    render_available_rules()
       
   with selected_container:
-    st.subheader("Selected Rules")
-    st.write("")
-    st.write("")
-    st.write(f"*Check a rule to remove it* - ",
-             f"**[{len(st.session_state.selected_ids)} of {len(st.session_state.all_rules)} rules selected]**")
-    st.divider()
-    
-    if st.session_state.selected_ids:
-      for idx, rule_id in enumerate(st.session_state.selected_ids):
-        for rule in st.session_state.all_rules:
-          if rule["id"] == rule_id:
-            if st.checkbox(f"{rule['code']} - {rule['name']}", key=f"selected_{rule['id']}"):
-              unselect_rule(idx)
-    else:
-      st.info("No rule selected.")
+    render_selected_rules()
 
-  if st.button("Run Check", key="run_query", icon=":material/send:"):
-    run_query()
-    
-  st.write("")
-  st.write("")
-  st.write("")
-  
-    
+@st.fragment
 def create_project():
   init_session_var()
-  
-  workbook = upload_workbook()
-    
+  st.session_state['all_sheets'] = upload_workbook()  
   st.divider()
   
-  if workbook:
-    select_valudation_rules()
-    
+  if st.session_state.project_file:
+    select_validation_rules()
+    st.divider()
+
+  if st.button("Run Check", key="run_query", icon=":material/send:", disabled=can_not_save()):
+    if not st.session_state.selected_ids:
+      alert("No rule selected.")
+      return False
+  
+    run_query()
+  
+  st.write("")
+  st.write("")

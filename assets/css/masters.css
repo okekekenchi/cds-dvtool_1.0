@@ -81,4 +81,6 @@ div[data-testid="stExpanderDetails"] {
 
 .stColumn div {
     flex-flow: row !important;
+    align-items: center;
 }
+

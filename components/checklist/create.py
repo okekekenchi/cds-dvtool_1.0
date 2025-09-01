@@ -127,7 +127,7 @@ def save_checklist():
                 created = ValidationChecklist.create(db, **checklist)
             
             if created:
-                st.toast("Record created successfully")
+                st.toast("Record created successfully", icon=":material/check_circle:")
                 reset_form()
                 st.rerun()
             else:

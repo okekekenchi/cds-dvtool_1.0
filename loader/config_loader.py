@@ -5,9 +5,10 @@ import json
 @st.cache_resource  # Cache to prevent reloading on reruns
 def load_all_json_configs(config_dir="config"):
     configs = {}
+    exceptions = ["project_log"]
 
     for filename in os.listdir(config_dir):
-        if filename.endswith(".json"):
+        if filename.endswith(".json") and filename not in exceptions:
             path = os.path.join(config_dir, filename)
             with open(path, 'r') as f:
                 configs[filename[:-5]] = json.load(f)  # remove .json

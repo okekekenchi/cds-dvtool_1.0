@@ -9,13 +9,15 @@ from models.user import User
 from SessionManager import SessionManager
 from streamlit_cookies_manager import EncryptedCookieManager
 from loader.config_loader import config
+from util.env import EnvHelper
 
 
 def init_session_cookie():
     st.session_state.current_page = None
+    env = EnvHelper()
     cookies = EncryptedCookieManager(
-        prefix = "cds_", 
-        password = "38#$@__!@#$%^&*()_81~!!@",
+        prefix = "cds_",
+        password = env("secrets.cookies.password")
     )
     
     if not cookies.ready():

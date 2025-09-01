@@ -11,7 +11,7 @@ reload_package("components.column_operation")
 import streamlit as st
 from components.column_operation import column_operation
     
-@st.dialog('Preview Sheet/Table', width="large")
+@st.dialog('Preview Sheet/Table', width="large", dismissible=True)
 def preview_sheet(df):
     st.dataframe(df.head())
     

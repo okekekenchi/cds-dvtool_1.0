@@ -4,7 +4,7 @@ from loader.config_loader import config
 import importlib
 from models.base import BaseModel
 
-system_tables = ["users","sessions","projects","validation_checklist"]
+system_tables = ["users","sessions","project_logs","validation_checklists"]
 system_fields = ["created_by", "created_at", "updated_at"]
 bool_fields = ["active"]
 textarea_fields = ["mb_desc", "desc", "description"]

@@ -62,7 +62,7 @@ def get_model(table_name):
 def get_selected_sheets(all_sheets: dict, selected_sheet_names: list[str]) -> dict:
     return { name: all_sheets.get(name) for name in selected_sheet_names }
 
-def load_checklist(config: dict, all_sheets:dict) -> pd.DataFrame:
+def load_checklist(config: dict, all_sheets:dict, get:str = "failed") -> pd.DataFrame | dict:
     """_summary_
 
     Args:
@@ -80,13 +80,22 @@ def load_checklist(config: dict, all_sheets:dict) -> pd.DataFrame:
             st.warning(f"Sheet {sheet["name"]} not found")
             return pd.DataFrame()
      
-    selected_sheets = run_column_operations(all_sheets, config['sheets'])
+    selected_sheets = run_column_operations(all_sheets, config.get('sheets', []))
     
-    joined_df = get_joined_sheets(selected_sheets, config.get('joins', []))
+    result = get_joined_sheets(selected_sheets, config.get('joins', []))
 
-    queried_df = execute_query(all_sheets, joined_df, config.get('conditions', []))
+    result['failed_df'] = execute_query(all_sheets, result["joined_df"], config.get('conditions', []))
     
-    return queried_df
+    # Create boolean mask for passed records (records NOT in failed_df)
+    passed_mask = ~result["residual_df"].index.isin(result['failed_df'].index)
+    result["passed_df"] = result["residual_df"][passed_mask]
+    
+    if get == "failed":
+        return result['failed_df']
+    elif get == "passed":
+        return result['passed_df']
+    elif get == "all":
+        return result
 
 
 def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str|pd.Series:

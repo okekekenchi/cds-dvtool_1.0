@@ -204,7 +204,7 @@ def build_query(all_sheets: dict, configuration:dict, joined_df: pd.DataFrame) -
     _, col1, col2 = st.columns([0.7,0.11,0.06], vertical_alignment='center')
     
     with col1:
-        if st.button(f"Add", key="add_query_condition", icon=":material/add:"):            
+        if st.button(f"Add", key="add_query_condition", icon=":material/add:", use_container_width=True):            
             if (not new['column'] or not new['operator'] or not new['logic']):
                 alert("Fill all required fields")
                 return
@@ -226,7 +226,7 @@ def build_query(all_sheets: dict, configuration:dict, joined_df: pd.DataFrame) -
     show_selected_conditions(configuration)
     
     if configuration['conditions']:
-        col1, col2, _ = st.columns([0.2, 0.1, 0.8], vertical_alignment='center')
+        col1, col2, _ = st.columns([0.215, 0.1, 0.685], vertical_alignment='center')
         with col1:
             st.selectbox(label="",
                         options=['--Select Logical Group--','AND', 'OR'],

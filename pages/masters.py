@@ -1,6 +1,6 @@
 import streamlit as st
 from util.auth_utils import authenticated
-from utils import get_model_class, system_fields, bool_fields, required_fields, textarea_fields
+from utils import get_model_class, system_tables, system_fields, bool_fields, required_fields, textarea_fields
 from components.side_nav import side_nav
 from loader.config_loader import config
 from loader.css_loader import load_css
@@ -233,8 +233,7 @@ def main():
     
     col1, col2, col3, col4 = st.columns([0.35, 0.3, 0.15, 0.2], vertical_alignment="bottom")
     with col1:
-        exempt_tables = ['validation_checklists']
-        table_names = [ name for name in get_table_names() if name not in exempt_tables ]
+        table_names = [ name for name in get_table_names() if name not in system_tables ]
         options = { name: config(f'master.{name[:-1]}.label') for name in table_names }
 
         if options:

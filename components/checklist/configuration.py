@@ -26,8 +26,8 @@ from services.query_builder_service import execute_query
 def configure_checklist(configuration: dict):
     if st.session_state.checklist.get('sheets'): # Question this
         st.markdown("""<h4> Configuration </h4>""", unsafe_allow_html=True)
-        tabs = ["Select Sheets *", "Join Sheets", "Build Query", "Log Column *", "View Output"]
-        sheet_tab, join_tab, query_tab, log_column_tab, output_tab = st.tabs(tabs, width='stretch')
+        tabs = ["Select Sheets *", "Join Sheets", "Residual", "Build Query", "Log Column *", "View Output"]
+        sheet_tab, join_tab, residual_tab, query_tab, log_column_tab, output_tab = st.tabs(tabs, width='stretch')
         
         with sheet_tab:
             select_sheets(st.session_state.checklist['sheets'], configuration)
@@ -44,10 +44,17 @@ def configure_checklist(configuration: dict):
                 st.info('You need at least two or more sheets/tables to perform a join.')
                 
             if len(selected_sheets):
-                joined_df = get_joined_sheets(
+                result = get_joined_sheets(
                                 sheets=selected_sheets,
                                 join_conditions=configuration.get('joins', [])
                             )
+                joined_df = result["joined_df"]
+        
+        if len(selected_sheets) and 'residual_df' in result:
+            with residual_tab:
+                residual_df = result["residual_df"]
+                st.info(f"{len(residual_df)} residual record(s) returned.")
+                st.dataframe(residual_df)
         
         with query_tab:
             if len(selected_sheets):
