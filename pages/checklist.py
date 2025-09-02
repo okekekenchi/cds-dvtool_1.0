@@ -1,14 +1,14 @@
-import importlib
-import sys
+# import importlib
+# import sys
 
-def reload_package(package_name: str):
-    for name in list(sys.modules):
-        if name == package_name or name.startswith(f"{package_name}."):
-            importlib.reload(sys.modules[name])
+# def reload_package(package_name: str):
+#     for name in list(sys.modules):
+#         if name == package_name or name.startswith(f"{package_name}."):
+#             importlib.reload(sys.modules[name])
 
-reload_package("components.checklist.view")
-reload_package("components.checklist.create")
-reload_package("components.checklist.checklist")
+# reload_package("components.checklist.view")
+# reload_package("components.checklist.create")
+# reload_package("components.checklist.update")
 
 import streamlit as st
 from loader.css_loader import load_css
@@ -28,12 +28,12 @@ def init_session_var():
         st.session_state.selected_checklist = {}
     if "active_records" not in st.session_state:
         st.session_state.active_records = 1
-    if "update_checklist" not in st.session_state:
-        st.session_state.update_checklist = False
-    if "create_checklist" not in st.session_state:
-        st.session_state.create_checklist = True
     if "reset_form" not in st.session_state:
         st.session_state.reset_form = True
+    # if "update_checklist" not in st.session_state:
+    #     st.session_state.update_checklist = False
+    # if "create_checklist" not in st.session_state:
+    #     st.session_state.create_checklist = True
         
 def item_selected():
     return True if st.session_state.selected_checklist.get('id') else False

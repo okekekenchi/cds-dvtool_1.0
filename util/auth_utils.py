@@ -42,11 +42,22 @@ def login(email, password):
     with get_db() as db:
         user = User.findByEmail(db, email)
     
+    if not user:
+        st.error("Invalid email ID")
+        return False
+        
+    if not user.active:
+        st.error("Your account has been deactivated. Contact admin")
+        return False
+    
     if user and verify_password(password, user.password):
         sessions = SessionManager()
         if sessions.auth_session(st.session_state.session_id, user.id):
             st.session_state.user_id = user.id
+            st.session_state.user_role = user.role
             return True
+        
+    st.error("Invalid password")
     return False
     
 def clear_cookies(cookies: EncryptedCookieManager):
@@ -62,14 +73,15 @@ def verify_password(plain_password, hashed_password):
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 # User management
-def create_user(full_name, email, password):
+def create_user(full_name, email, password, role):
     with get_db() as db:
         # Create a user
         new_user = User.create(
             db,
             full_name=full_name,
             email=email,
-            password=hash_password(password)
+            password=hash_password(password),
+            role=role
         )
     return new_user
 
@@ -83,7 +95,7 @@ def email_exists(email):
 
     conn = sqlite3.connect(config('database.name'))
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM users WHERE id = ?', (email,))
+    cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
     user = cursor.fetchone()
     conn.close()
     return True if user else False
@@ -133,6 +145,28 @@ def guest(func):
             return
         return func(*args, **kwargs)
     return wrapper
+
+def requires_any_role(*required_roles):
+    """
+    Ensure that the authenticated user has at least one of the required roles.
+    
+    Args:
+        *required_roles: Variable list of role strings
+    """
+    def decorator(func):
+        @wraps(func)
+        @authenticated
+        def wrapper(*args, **kwargs):
+            user_role = st.session_state.get('user_role', None)
+            
+            if user_role not in required_roles:
+                st.error("You don't have the required role to access this page.")
+                st.stop()
+                return
+            
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 def set_session_cookie(sessions: SessionManager, cookies: EncryptedCookieManager, user_id=None, force_new_cookie=True):
     """Creates a new session if already not existing"""

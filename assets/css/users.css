@@ -1,0 +1,85 @@
+.stMainBlockContainer {
+    padding: 0px 30px;
+    padding-bottom: 30px;
+}
+
+.stHeading {
+    position: absolute;
+    z-index: 1000000;
+    top: -5px;
+    left: -2px;
+}
+
+.stAppHeader {
+    height: 20px !important;
+    min-height: 40px;
+}
+
+iframe {
+    display: none;
+}
+
+.st-emotion-cache-1v0mbdj {
+    border-radius: 50%;
+    /* border: 2px solid #e83757; */
+}
+
+.st-emotion-cache-1v0mbdj img {
+    border-radius: 50%;
+}
+
+.stButton > button {
+    color: white;
+    padding: 10px 24px;
+    text-align: center;
+    text-decoration: none;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    background-color: #e83757;
+}
+
+.stButton>button:hover {
+    background-color: #381338 !important;
+    color: white !important;
+}
+
+.st-emotion-cache-1rwb540 {
+    height: 30px;
+    min-height: 31px;
+    justify-self: end !important;
+    width: -webkit-fill-available;
+}
+
+.st-emotion-cache-1t02cvl {
+    align-content: end;
+}
+
+.st-emotion-cache-bfgnao > p {
+    font-weight: bold;
+}
+
+/* button[aria-label="Close"] {
+    display: none !important;
+} */
+
+.st-emotion-cache-8atqhb {
+    justify-items: normal !important;
+}
+
+.stFileUploader {
+    width: -webkit-fill-available;
+}
+
+.stTabs > div {
+    width: -webkit-fill-available !important;
+}
+
+div[data-testid="stExpanderDetails"] {
+    min-height: 200px;
+}
+
+.stColumn div {
+    flex-flow: row !important;
+    align-items: center;
+}

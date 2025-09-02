@@ -25,8 +25,6 @@ def main():
         else:
             if login(email, password):
                 st.switch_page(config('route.home'))
-            else:
-                st.error("Invalid email or password")
 
     st.markdown("---")
     col1, col2 = st.columns([1, 1], vertical_alignment="center")

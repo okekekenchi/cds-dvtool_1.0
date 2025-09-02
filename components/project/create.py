@@ -89,7 +89,7 @@ def run_query():
           
           if not selected_columns:
             st.warning(f"No column selection made for rule: **{rule['name']}**")
-            
+          
           failed_df = result["failed_df"][selected_columns]
 
           results.append({
@@ -105,8 +105,7 @@ def run_query():
     st.toast("Validation Successful.", icon=":material/check_circle:")
     st.rerun()
   except Exception as e:
-    st.write(e)
-    st.warning(f"Check validation rule combination {str(e)}")
+    st.write("")
 
 def log_error(results:list[dict]):
   file_name = st.session_state.project_file.name

@@ -4,11 +4,15 @@ import streamlit as st
 from database.database import engine
 from util.datatable import get_table_data
 
-def load_data_with_retry(table: str, query: str="", max_retries: int = 3, **filters) -> pd.DataFrame:
+def load_data_with_retry(
+    table: str, query: str="",
+    columns:str | list[str] | None = None,
+    max_retries: int = 3, **filters
+    ) -> pd.DataFrame:
     """Helper function with retry logic for database operations"""
     for attempt in range(max_retries):
         try:
-            df = get_table_data(table, query, **filters)
+            df = get_table_data(table, query, columns=columns, **filters)
         except Exception as e:
             if attempt == max_retries - 1:
                 raise

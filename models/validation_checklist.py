@@ -1,5 +1,4 @@
 from sqlalchemy import Column, String, Text, Integer, Boolean, JSON, ForeignKey
-from sqlalchemy.orm import relationship
 from models.base import BaseModel
 
 class ValidationChecklist(BaseModel):
@@ -16,6 +15,4 @@ class ValidationChecklist(BaseModel):
     created_by = Column(Integer, ForeignKey('users.id'))
     
     _default = {}
-    
-    # creator = relationship("User", backref="checklists")
     

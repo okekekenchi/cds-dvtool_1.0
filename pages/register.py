@@ -44,7 +44,7 @@ def main():
             
         # Process if no errors
         if not errors:
-            if create_user(full_name, email, password):
+            if create_user(full_name, email, password, "admin"):
                 st.success("Account created successfully! Please login.")
                 time.sleep(2)
                 st.switch_page(config('route.login'))

@@ -1,3 +1,4 @@
+import copy
 import streamlit as st
 from util.auth_utils import authenticated
 from utils import get_model_class, system_tables, system_fields, bool_fields, required_fields, textarea_fields
@@ -124,9 +125,6 @@ def create_form():
 def show_datatable(create_btn_placeholder):
     action_placeholder = st.empty()
     
-    # fetch data
-    # search_columns =  get_table_columns(st.session_state.selected_table) - system_fields
-    # search_columns
     try:
         df = get_table_data(st.session_state.selected_table,
                             st.session_state.search_query,
@@ -179,7 +177,7 @@ def show_datatable(create_btn_placeholder):
 
         # Now safely check if we have selected rows
         if isinstance(selected_rows, list) and len(selected_rows) > 0:
-            st.session_state.selected_row = selected_rows[0]
+            st.session_state.selected_row = copy.deepcopy(selected_rows[0])
             st.session_state.new_record = False
         else:
             st.session_state.selected_row = {}

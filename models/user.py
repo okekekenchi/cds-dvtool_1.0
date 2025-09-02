@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, JSON, Boolean
+from sqlalchemy import Column, String, JSON, Boolean, Integer
 from models.base import BaseModel
 
 class User(BaseModel):
@@ -8,8 +8,10 @@ class User(BaseModel):
     email = Column(String(100), unique=True, nullable=False, index=True)
     password = Column(String(255), nullable=False)
     active = Column(Boolean, default=True, index=True)
-    permission = Column(JSON, default={})
+    role = Column(String(50), default="user", nullable=False)
+    created_by = Column(Integer)
 
     @classmethod
     def findByEmail(cls, db, email):
         return cls.where(db, email=email).first()
+    
