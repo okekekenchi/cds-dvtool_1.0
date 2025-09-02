@@ -178,6 +178,8 @@ def perform_joins(sheets: dict, joins: list[dict]) -> dict:
                 indicator=True
             )
             
+            
+            
             if is_anti_join:
                 main_result = joined_with_indicator[joined_with_indicator['_merge'] == 'left_only'].copy()
                 step_residual = joined_with_indicator[joined_with_indicator['_merge'] == 'both'].copy()
@@ -188,7 +190,8 @@ def perform_joins(sheets: dict, joins: list[dict]) -> dict:
                 else: # left, right, outer
                     main_result = joined_with_indicator.copy()
                     step_residual = joined_with_indicator[joined_with_indicator['_merge'] == 'left_only'].copy()
-
+            
+            st.write(joined_with_indicator.copy().drop('_merge', axis=1))
             # Remove indicator column
             current_data = main_result.drop('_merge', axis=1)
             step_residual = step_residual.drop('_merge', axis=1)

@@ -1,5 +1,6 @@
 import json
 import time
+import copy
 import pandas as pd
 import streamlit as st
 from utils import alert
@@ -18,6 +19,24 @@ load_css('assets/css/project.css')
 TABLE_NAME: Final[str] = "validation_checklists"
 STATUS_OPTIONS: Final[dict[int, str]] = {1: "Active", 0: "Inactive"}
 COLUMNS_TO_HIDE: Final[list[str]] = ["id", "active", "config", "tags"]
+
+checklist = {
+    'code': '',
+    'name': '',
+    'description': '',
+    'tags': [],
+    'workbook': None,
+    'sheets': {},
+    'active': True,
+    'config': {}
+}
+
+config = {
+    'sheets': [],
+    'joins': [],
+    'col_operations': [],
+    'conditions': []
+}
 
 @st.dialog("Clone Checklist")
 def clone_checklist_form(record_id):    
@@ -121,11 +140,11 @@ def handle_selection_change(selected_rows: list[dict]):
             st.session_state.reset_form = True # Reset form for update
             st.rerun()
     else:
-        if st.session_state.selected_checklist != {}:
+        if st.session_state.selected_checklist.get("id", None) != None:
             if st.session_state.selected_checklist.get('id'):
                 st.session_state.reset_form = True # Reset form for create
-                st.session_state.config = {}
-                st.session_state.selected_checklist = {}
+                st.session_state.config = copy.deepcopy(config)
+                st.session_state.selected_checklist = copy.deepcopy(checklist)
             st.rerun()
  
 
@@ -191,18 +210,13 @@ def view_checklist():
         fit_columns_on_grid_load=True,
         key="checklist_datatable"
     )
-    # st.write(grid_response.get("selected_rows"))
+    
     handle_selection_change(grid_response.get("selected_rows"))
     
     # # Show action buttons for selected row
-    with action_placeholder.container(): 
-        if st.session_state.selected_checklist:
-            record_id = st.session_state.selected_checklist.get("id")
-    
-            if not record_id:
-                st.warning('Record not selected.')
-                return
-            
+    with action_placeholder.container():
+        record_id = st.session_state.selected_checklist.get("id")
+        if record_id:
             col1, _ = st.columns([2, 1], vertical_alignment="center")
             with col1:
                 if st.button("Clone", icon=":material/content_copy:",

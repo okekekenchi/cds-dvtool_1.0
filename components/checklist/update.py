@@ -20,15 +20,8 @@ from sqlalchemy.exc import IntegrityError
 from models.validation_checklist import ValidationChecklist
 from components.checklist.configuration import configure_checklist
 from services.workbook_service import load_data
-
-config = {
-    'sheets': [],
-    'joins': [],
-    'col_operations': [],
-    'conditions': []
-}
-
 from typing import Final
+
 TABLE_NAME: Final[str] = "validation_checklists"
 
 def init_session_var():

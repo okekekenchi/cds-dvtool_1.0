@@ -31,8 +31,8 @@ operators = {
     'has_no_parent': 'Has No Parent',
     'wildcard_match': 'Is Like',
     'wildcard_not_match': 'Is Not Like',
-    'distinct_combinations': 'Distinct Combinations',
-    'non_distinct_combinations': 'Non Distinct Combinations',
+    'distinct_combinations': 'No Conflicting Values With',
+    'non_distinct_combinations': 'Conflicting Values With',
 }
 
 operator_map = {

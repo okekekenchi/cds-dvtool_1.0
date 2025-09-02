@@ -83,7 +83,7 @@
         "code": "Q013",
         "name": "HB same PNR as HA",
         "description": "Table HB is the Additional Reference Number. Table HA is the Item Identification. This query identifies where a record exists in table HA but the child record in HB has the same REFNUMHA.",
-        "config": {"sheets": [{"name": "HA"}, {"name": "HB"}], "joins": [{"left_table": "HA", "join_type": "left", "right_table": "HB", "on_cols": [{"left_column": "refnumha", "right_column": "addrefhb"}]}], "col_operations": [], "conditions": [], "log": {"columns": ["eiacodxa", "cagecdxh", "refnumha", "cagecdhb", "refnumhb"]}}
+        "config": {"sheets": [{"name": "HA"}, {"name": "HB"}], "joins": [{"left_table": "HA", "join_type": "inner", "right_table": "HB", "on_cols": [{"left_column": "refnumha", "right_column": "addrefhb"}]}], "col_operations": [], "conditions": [], "log": {"columns": ["eiacodxa", "cagecdxh", "refnumha", "cagecdhb", "refnumhb"]}}
       },
       {
         "code": "Q014",
@@ -161,7 +161,7 @@
         "code": "Q026",
         "name": "Task Code Interval - BH Freq Mismatch",
         "description": "This task identifies where there is a record in table CA and a child record in table BH for the same LSACONXB, ALTLCNXB & TASKCDCA. The 2nd character of the TASKCDCA in table CA does not align with the MAININBH & MAINMBBH fields IN table BH.",
-        "config": {"sheets": [{"name": "CA", "col_operations": [{"value_2": "2nd_char_of_taskcdca", "column": "taskcdca", "operator": "get_character", "value_1": 2}]}, {"name": "BH", "col_operations": []}, {"name": "ca_task_code_interval", "col_operations": []}], "joins": [{"left_table": "CA", "join_type": "inner", "right_table": "BH", "on_cols": [{"left_column": "lsaconxb", "right_column": "lsaconbh"}, {"left_column": "altlcnxb", "right_column": "altlcnbh"}, {"left_column": "taskcdca", "right_column": "ttaskcbh"}]}, {"left_table": "CA", "join_type": "left", "right_table": "ca_task_code_interval", "on_cols": [{"left_column": "2nd_char_of_taskcdca", "right_column": "task_code_interval"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "maininbh", "operator": "column_equals", "value_1": "bh_freq", "column_char": 0, "logic": "And"}], "log": {"columns": ["eiacodxa", "lsaconxb", "altlcnxb", "taskcdca", "taskidca", "bh_freq", "maininbh", "task_code_interval_desc"]}}
+        "config": {"sheets": [{"name": "BH", "col_operations": [{"value_2": "2nd_char_of_taskcdca", "column": "ttaskcbh", "operator": "get_character", "value_1": 2}]}, {"name": "ca_task_code_interval", "col_operations": []}], "joins": [{"left_table": "BH", "join_type": "left", "right_table": "ca_task_code_interval", "on_cols": [{"left_column": "2nd_char_of_taskcdca", "right_column": "task_code_interval"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "maininbh", "operator": "column_equals", "value_1": "bh_freq", "column_char": 0, "logic": "And"}, {"value_2": null, "column": "mainmbbh", "operator": "column_equals", "value_1": "bh_freq_mb", "column_char": 0, "logic": "And"}], "log": {"columns": ["eiacodxa", "lsaconxb", "altlcnxb", "taskcdca", "taskidca", "bh_freq", "maininbh", "task_code_interval_desc"]}}
       }
     ]
   },

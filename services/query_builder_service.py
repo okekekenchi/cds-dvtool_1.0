@@ -202,30 +202,40 @@ def build_wildcard_condition(column:str, operator:str, value, value_2):
     not_operator = '~' if operator == 'wildcard_not_match' else ''
     return f"{not_operator}`{column}`.str.match('^{pattern}$', case=False, na=False)"    
 
-def build_distinct_combination_condition(column:str, operator:str, value, df:pd.DataFrame):
-    if value is None: return ""
+def build_conflicting_values_for_key_condition(column:str, operator:str, value, df:pd.DataFrame):
+    """
+    Finds records in a Table where the column values are identical but the
+    value column values differ.
+    
+    Args:
+        column: The column to check for identical values (grouping column)
+        operator: 'non_distinct_combinations' or 'distinct_combinations'
+        value: The column to check for differing values (conflict column)
+        df: The DataFrame to analyze
+    """
+    if value is None: 
+        return ""
             
     if value not in df.columns:
         st.warning(f"Column {value} does not exist.")
         return ""
-        
-    non_distinct_values = (
-        df.groupby(value)[column]
-        .nunique()
-        .loc[lambda x: x > 1]
-        .dropna()
+    
+    # Find groups where the grouping column has same values but conflict column has different values
+    conflict_groups = (
+        df.groupby(column)[value]
+        .nunique()  # Count distinct values in conflict column for each group
+        .loc[lambda x: x > 1]  # Keep only groups with more than 1 distinct value
         .index
     ).tolist()
     
-    # from the remaining distinct records, get the "column" where "value" not in "non_distinct_values"
-    # then include result (list) in final query
-            
-    if len(non_distinct_values) == 0:
+    if len(conflict_groups) == 0:
+        # No conflicts found - return appropriate condition
         return "False" if operator == 'non_distinct_combinations' else "True"
     
-    not_operator = '~' if operator == 'non_distinct_combinations' else ''
-            
-    return f"{not_operator}`{value}`.isin({non_distinct_values})"
+    # Build the condition to filter for records in conflicting groups
+    not_operator = '~' if operator == 'distinct_combinations' else ''
+    
+    return f"{not_operator}`{column}`.isin({conflict_groups})"
 
 def build_in_list_condition(
     column:str, operator:str, value, column_char,
@@ -428,7 +438,7 @@ def build_condition(all_sheets: dict, df: pd.DataFrame, condition: dict) -> str|
         return build_wildcard_condition(column, operator, value, value_2)
     
     elif operator in ['non_distinct_combinations', 'distinct_combinations']:
-        return build_distinct_combination_condition(column, operator, value, df)
+        return build_conflicting_values_for_key_condition(column, operator, value, df)
         
     value, value_2 = pre_process_values_based_on_column_data_type(column, operator, value, value_2, df)
     

@@ -19,29 +19,14 @@ from models.validation_checklist import ValidationChecklist
 from components.checklist.configuration import configure_checklist
 from services.workbook_service import load_data
 
-checklist = {
-    'code': '',
-    'name': '',
-    'description': '',
-    'tags': [],
-    'workbook': None,
-    'sheets': {},
-    'active': True,
-    'config': {}
-}
-
-config = {
-    'sheets': [],
-    'joins': [],
-    'col_operations': [],
-    'conditions': []
-}
 
 def init_session_var():
+    selected_checklist = copy.deepcopy(st.session_state.selected_checklist)
+    
     if 'checklist' not in st.session_state:
-        st.session_state.checklist = copy.deepcopy(checklist)
+        st.session_state.checklist = selected_checklist
     if 'config' not in st.session_state:
-        st.session_state.config = copy.deepcopy(config)
+        st.session_state.config = selected_checklist.get('config')
     
     if 'list_type' not in st.session_state:
         st.session_state.list_type = None
