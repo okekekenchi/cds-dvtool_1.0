@@ -54,7 +54,11 @@ a:hover {
     padding: 10px !important;
 }
 
-.stTextInput > label > div > p{
+.stTextInput > label > div > p {
+    font-weight: bold !important;
+}
+
+.stTextArea > label > div > p {
     font-weight: bold !important;
 }
 

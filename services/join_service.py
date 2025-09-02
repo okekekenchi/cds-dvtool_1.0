@@ -44,6 +44,7 @@ def detect_exact_dtype(series: pd.Series) -> str:
     return 'mixed' # If inference is still unclear (e.g., 'mixed')
 
 def handle_error_return() -> dict:
+    """Default return"""
     return {
         'joined_df': pd.DataFrame(),
         'residual_df': pd.DataFrame(),
@@ -110,20 +111,17 @@ def handle_column_conflicts(left_df, right_df, right_on, right_table):
     
     return right_df_renamed, right_on_renamed
 
-def perform_joins(sheets: dict, joins: list[dict], return_residuals: bool = False) -> dict:
+def perform_joins(sheets: dict, joins: list[dict]) -> dict:
     """
     Performs multi-table joins and returns a single cumulative residual of all failed records.
     
     Args:
         sheets: Dictionary of {sheet_name: DataFrame}
         joins: List of join specifications
-        return_residuals: If True, returns cumulative residual
     
     Returns:
         dict: Contains joined data and cumulative residual of all failed records
-        or pd.DataFrame: Single joined result if return_residuals=False
     """
-    
     current_data = None
     cumulative_residual = pd.DataFrame()
     original_left_table_name = joins[0]['left_table'] if joins else None
@@ -164,7 +162,6 @@ def perform_joins(sheets: dict, joins: list[dict], return_residuals: bool = Fals
         if not left_on or not right_on:
             return handle_error_return()
         
-        # Handle column naming conflicts
         right_df_renamed, right_on_renamed = handle_column_conflicts(
             left_df, right_df, right_on, right_table
         )
@@ -218,7 +215,6 @@ def perform_joins(sheets: dict, joins: list[dict], return_residuals: bool = Fals
         current_data = current_data.drop(columns=[original_index_col])
     if not cumulative_residual.empty and original_index_col in cumulative_residual.columns:
         cumulative_residual = cumulative_residual.drop(columns=[original_index_col])
-
 
     return {
         'joined_df': current_data if current_data is not None else pd.DataFrame(),

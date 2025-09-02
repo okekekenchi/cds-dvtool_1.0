@@ -107,4 +107,3 @@ def get_source_from_validation_checklist():
         if list_source['column']:
             return f"{ListType.Checklist.value}.{checklist.id}.{list_source['column']}"
     return None
-

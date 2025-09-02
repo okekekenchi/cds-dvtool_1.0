@@ -107,55 +107,55 @@
         "code": "Q017",
         "name": "CA without AOR",
         "description": "Table CA is the Task Requirement. Annual Operating Requirement (AOR). This query identifies where there is a record in table CA but the AORlCNCA, AORALCCA, AORTYPCA & AORMSBCA fields have not been populated.",
-        "config": {"sheets": [{"name": "CA"}], "joins": [], "col_operations": [], "conditions": [{"value_2": null, "column": "aorlcnca", "operator": "is_null", "value_1": null, "logic": "And"}, {"value_2": null, "column": "aoralcca", "operator": "is_null", "value_1": null, "logic": "And"}, {"value_2": null, "column": "aortypca", "operator": "is_null", "value_1": null, "logic": "And"}, {"value_2": null, "column": "aormsbca", "operator": "is_null", "value_1": null, "logic": "And"}]}
+        "config": {"sheets": [{"name": "CA"}], "joins": [], "col_operations": [], "conditions": [{"value_2": null, "column": "aorlcnca", "operator": "is_null", "value_1": null, "logic": "And"}, {"value_2": null, "column": "aoralcca", "operator": "is_null", "value_1": null, "logic": "And"}, {"value_2": null, "column": "aortypca", "operator": "is_null", "value_1": null, "logic": "And"}, {"value_2": null, "column": "aormsbca", "operator": "is_null", "value_1": null, "logic": "And"}], "log": {"columns": ["eiacodxa", "lsaconxb", "altlcnxb", "taskcdca"]}}
       },
       {
         "code": "Q018",
         "name": "Task ID - Task code mismatch",
         "description": "This query identifies where there is a record in table CA but the 1st character of the TASKCDCA does not align with the first word/s of the TASKIDCA.",
-        "config": {"sheets": [{"name": "CA", "col_operations": [{"value_2": "1st_char_of_taskcdca", "column": "taskcdca", "operator": "get_character", "value_1": 1}, {"value_2": "1st_word_of_taskcdca, other", "column": "taskidca", "operator": "split", "value_1": " :1"}]}, {"name": "ca_task_code_vs_task_id", "col_operations": []}], "joins": [{"left_table": "CA", "join_type": "left", "right_table": "ca_task_code_vs_task_id", "on_cols": [{"left_column": "1st_char_of_taskcdca", "right_column": "task_code"}]}], "conditions": [{"value_2": null, "column": "1st_word_of_taskcdca", "operator": "not_in_column_list", "value_1": "description", "logic": "And"}], "log": {"columns": ["eiacodxa", "lsaconxb", "altlcnxb", "taskcdca"]}}
+        "config": {"sheets": [{"name": "CA", "col_operations": [{"value_2": "1st_char_of_taskcdca", "column": "taskcdca", "operator": "get_character", "value_1": 1}, {"value_2": "1st_word_of_taskcdca, other", "column": "taskidca", "operator": "split", "value_1": " :1"}]}, {"name": "ca_task_code_vs_task_id", "col_operations": []}], "joins": [{"left_table": "CA", "join_type": "left", "right_table": "ca_task_code_vs_task_id", "on_cols": [{"left_column": "1st_char_of_taskcdca", "right_column": "task_code"}]}], "conditions": [{"value_2": null, "column": "1st_word_of_taskcdca", "operator": "not_in_column_list", "value_1": "description", "logic": "And"}], "log": {"columns": ["eiacodxa", "lsaconxb", "altlcnxb", "taskcdca", "taskidca", "description"]}}
       },
       {
         "code": "Q019",
         "name": "BH Task type - Freq MB mismatch",
         "description": "Table BH is Failure Mode Task. MB is Measurement Base. This task identifies where there is a record in table BH but the TATYPEBH does not align with the MAINMBBH.",
-        "config": {"sheets": [{"name": "BH"}, {"name": "bh_task_type_vs_mb", "col_operations": []}], "joins": [{"left_table": "BH", "join_type": "left", "right_table": "bh_task_type_vs_mb", "on_cols": [{"left_column": "tatypebh", "right_column": "task_type"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "mainmbbh", "operator": "not_in_column_list", "value_1": "meas_base", "logic": "And"}]}
+        "config": {"sheets": [{"name": "BH"}, {"name": "bh_task_type_vs_mb", "col_operations": []}], "joins": [{"left_table": "BH", "join_type": "left", "right_table": "bh_task_type_vs_mb", "on_cols": [{"left_column": "tatypebh", "right_column": "task_type"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "mainmbbh", "operator": "not_in_column_list", "value_1": "meas_base", "logic": "And"}], "log": {"columns": ["eiacodxa", "lsaconbh", "altlcnbh", "famoinbh", "ttaskcbh", "maininbh", "mb_desc", "desc"]}}
       },
       {
         "code": "Q020",
         "name": "BH - CA Freq MB mismatch",
         "description": "Table BH is Failure Mode Task. Table CA is the Task Requirement. MB is Measurement Base. This task identifies where there is a record in table CA and a child record in table BH but the AORMSBCA & MAINMBBH are different for the same LSACONXB, ALTLCNXB & TASKCDCA.",
-        "config": {"sheets": [{"name": "CA"}, {"name": "BH"}], "joins": [{"left_table": "CA", "join_type": "inner", "right_table": "BH", "on_cols": [{"left_column": "lsaconxb", "right_column": "lsaconbh"}, {"left_column": "altlcnxb", "right_column": "altlcnbh"}, {"left_column": "taskcdca", "right_column": "ttaskcbh"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "aormsbca", "operator": "column_not_equals", "value_1": "mainmbbh", "column_char": 0, "logic": "And"}]}
+        "config": {"sheets": [{"name": "CA"}, {"name": "BH"}], "joins": [{"left_table": "CA", "join_type": "inner", "right_table": "BH", "on_cols": [{"left_column": "lsaconxb", "right_column": "lsaconbh"}, {"left_column": "altlcnxb", "right_column": "altlcnbh"}, {"left_column": "taskcdca", "right_column": "ttaskcbh"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "aormsbca", "operator": "column_not_equals", "value_1": "mainmbbh", "column_char": 0, "logic": "And"}], "log": {"columns": ["eiacodxa", "lsaconxb", "altlcnxb", "famoinbh", "ttaskcbh", "maininbh", "taskdescca"]}}
       },
       {
         "code": "Q021",
         "name": "BH Freq missing",
         "description": "Table BH is Failure Mode Task. This query identifies where there is a record in table BH but the MAININBH & MAINMBBH fields have not been populated.",
-        "config": {"sheets": [{"name": "BH"}], "joins": [], "col_operations": [], "conditions": [{"value_2": null, "column": "maininbh", "operator": "is_null", "value_1": null, "logic": "And"}, {"value_2": null, "column": "mainmbbh", "operator": "is_null", "value_1": null, "logic": "And"}]}
+        "config": {"sheets": [{"name": "BH"}], "joins": [], "col_operations": [], "conditions": [{"value_2": null, "column": "maininbh", "operator": "is_null", "value_1": null, "logic": "And"}, {"value_2": null, "column": "mainmbbh", "operator": "is_null", "value_1": null, "logic": "And"}], "log": {"columns": ["eiacodxa", "lsaconbh", "altlcnbh", "famoinbh", "ttaskcbh"]}}
       },
       {
         "code": "Q022",
         "name": "HA Item name missing",
         "description": "Table HA is the Item Identification. This query identifies where there is a record in table HA but the ITNAMEHA field has not been populated.",
-        "config": {"sheets": [{"name": "HA"}], "joins": [], "col_operations": [], "conditions": [{"value_2": null, "column": "itnameha", "operator": "is_null", "value_1": null, "logic": "And"}]}
+        "config": {"sheets": [{"name": "HA"}], "joins": [], "col_operations": [], "conditions": [{"value_2": null, "column": "itnameha", "operator": "is_null", "value_1": null, "logic": "And"}], "log": {"columns": ["eiacodxa", "cagecdxh", "refnumha"]}}
       },
       {
         "code": "Q023",
         "name": "RAM indicator without BA",
         "description": "Table BD is the AR&M Indicator Characteristics. Table BA is the AR&M Characteristics. RAM Indicator within the XB table. This query identifies where there is a record in table XB and the RAMINDXB is 'Y' but there is no child BA record for the same LSACONXB & ALTLCNXB.",
-        "config": {"sheets": [{"name": "XB"}, {"name": "BA"}], "joins": [{"left_table": "XB", "join_type": "a_left", "right_table": "BA", "on_cols": [{"left_column": "lsaconxb", "right_column": "lsaconxb"}, {"left_column": "altlcnxb", "right_column": "altlcnxb"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "ramindxb", "operator": "equals", "value_1": "Y", "logic": "And"}]}
+        "config": {"sheets": [{"name": "XB"}, {"name": "BA"}], "joins": [{"left_table": "XB", "join_type": "a_left", "right_table": "BA", "on_cols": [{"left_column": "lsaconxb", "right_column": "lsaconxb"}, {"left_column": "altlcnxb", "right_column": "altlcnxb"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "ramindxb", "operator": "equals", "value_1": "Y", "logic": "And"}], "log": {"columns": ["eiacodxa", "lsaconxb", "altlcnxb"]}}
       },
       {
         "code": "Q024",
         "name": "Parent LCN missing",
         "description": "This query identifies where there is a record in table XB but there is no parent XB record in the LCN structure.",
-        "config": {"sheets": [{"name": "XB"}], "joins": [], "col_operations": [], "conditions": [{"value_2": null, "column": "lsaconxb", "operator": "has_no_parent", "value_1": null, "logic": "And"}]}
+        "config": {"sheets": [{"name": "XB"}], "joins": [], "col_operations": [], "conditions": [{"value_2": null, "column": "lsaconxb", "operator": "has_no_parent", "value_1": null, "logic": "And"}], "log": {"columns": ["eiacodxa", "lsaconxb", "altlcnxb"]}}
       },
       {
         "code": "Q025",
         "name": "Incorrect LCN indenture Code",
         "description": "Table XB is the LCN Indentured Item. This task identifies where there is a record in table XB but the LCNINDXB field does not align with the length of the LSACONXB.",
-        "config": {"sheets": [{"name": "XB"}, {"name": "xb_lcn_indenture"}], "joins": [{"left_table": "XB", "join_type": "left", "right_table": "xb_lcn_indenture", "on_cols": [{"left_column": "lcnindxb", "right_column": "lcnindxb"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "lsaconxb", "operator": "length_not_equals", "value_1": "lsaconxb_char_length", "logic": "And"}]}
+        "config": {"sheets": [{"name": "XB"}, {"name": "xb_lcn_indenture"}], "joins": [{"left_table": "XB", "join_type": "left", "right_table": "xb_lcn_indenture", "on_cols": [{"left_column": "lcnindxb", "right_column": "lcnindxb"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "lsaconxb", "operator": "length_not_equals", "value_1": "lsaconxb_char_length", "logic": "And"}], "log": {"columns": ["eiacodxa", "lsaconxb", "altlcnxb", "lcnindxb"]}}
       },
       {
         "code": "Q026",

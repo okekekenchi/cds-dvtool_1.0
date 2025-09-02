@@ -4,8 +4,6 @@ import streamlit as st
 from database.database import engine
 from util.datatable import get_table_data
 
-
-# @st.cache_data(ttl=60)
 def load_data_with_retry(table: str, query: str="", max_retries: int = 3, **filters) -> pd.DataFrame:
     """Helper function with retry logic for database operations"""
     for attempt in range(max_retries):

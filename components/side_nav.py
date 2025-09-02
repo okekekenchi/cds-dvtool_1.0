@@ -72,6 +72,6 @@ def side_nav():
     st.sidebar.page_link(f"{path}/project.py", label="My Projects", icon=":material/folder:"),
     st.sidebar.page_link(f"{path}/checklist.py", label="Validation Checklists", icon=":material/task:"),
     st.sidebar.page_link(f"{path}/masters.py", label="Masters", icon=":material/settings:"),
-    # st.sidebar.page_link(f"{path}/users.py", label="Users", icon=":material/groups:"),                
+    st.sidebar.page_link(f"{path}/users.py", label="Users", icon=":material/groups:"),                
     # st.sidebar.page_link(f"{path}/account.py", label="My account", icon=":material/account_circle:"),
     

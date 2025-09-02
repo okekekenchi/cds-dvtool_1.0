@@ -77,31 +77,29 @@ def can_not_save():
   
 def run_query():
   results = []
-  # First rule: validate against original sheets
   input_sheets = copy.deepcopy(st.session_state.all_sheets)
 
-  
   try:
     for idx, rule_id in enumerate(st.session_state.selected_ids):
       for rule in st.session_state.all_rules:
-        if rule["id"] == rule_id:          
-          # if idx != 0:
-            # Subsequent rules: validate against passed records from previous rule
-            # Create a temporary sheet structure for the validation
-            # input_sheets = {"passed_records": result_dfs[idx-1]["passed_df"]}
-          
+        if rule["id"] == rule_id:
           result = dict(load_checklist(rule["config"], input_sheets, "all"))
           log = rule["config"].get("log", {})
+          selected_columns = log.get("columns", [])
+          
+          if not selected_columns:
+            st.warning(f"No column selection made for rule: **{rule['name']}**")
+            
+          failed_df = result["failed_df"][selected_columns]
 
           results.append({
             "rule_id": rule_id,
             "total_records": result["total_records"],
             "join_steps": result["join_steps"],
-            "failed_df": result["failed_df"][log.get("columns", [])].to_dict(orient='records')
+            "failed_df": failed_df.to_dict(orient='records')
           })
-          
           break
-      
+
     st.session_state.validation_results = results
     log_error(results)
     st.toast("Validation Successful.", icon=":material/check_circle:")
