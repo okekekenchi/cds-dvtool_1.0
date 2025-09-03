@@ -1,6 +1,6 @@
 import json
 import pandas as pd
-from datetime import datetime, timezone
+from utils import format_datetime
 import streamlit as st
 from typing import Final
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
@@ -94,13 +94,7 @@ def project_detail():
 	st.write(f"**File name:** {log["file_name"]}")
 	st.write(f"**Type:** {log["file_type"]}")
 	st.write(f"**Version:** {log["version"]}")
- 
-	timestamp = log["created_at"]
-	dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
-	dt_utc = dt.replace(tzinfo=timezone.utc)  # Mark as UTC time
-	dt_local = dt_utc.astimezone()  # Convert to local timezone
-
-	st.write(f"**Run on:** {dt_local.strftime("%B %d, %Y at %I:%M %p")}")
+	st.write(f"**Run on:** {format_datetime(str(log["created_at"]))}")
 	st.write(f"**Rules Applied:** ")
 
 	for idx, data in enumerate(log["data"]):
