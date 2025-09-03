@@ -15,8 +15,10 @@ def side_nav():
 
     user = get_user_by_id(st.session_state.user_id)
     
+    
     if not user:
         return
+    
     load_css('assets/css/side_nav.css')
     with st.sidebar:
         st.markdown(f"""
@@ -71,7 +73,7 @@ def side_nav():
     # st.sidebar.page_link(f"{path}/home.py", label="Dashboard", icon=":material/dashboard:"),
     st.sidebar.page_link(f"{path}/project.py", label="My Projects", icon=":material/folder:"),
 
-    if st.session_state.get("user_role") == "admin":
+    if user.role == "admin":
         st.sidebar.page_link(f"{path}/checklist.py", label="Validation Checklists", icon=":material/task:"),
         st.sidebar.page_link(f"{path}/masters.py", label="Masters", icon=":material/settings:"),
         st.sidebar.page_link(f"{path}/users.py", label="Users", icon=":material/groups:"),

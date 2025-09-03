@@ -22,8 +22,8 @@ def init_session_var():
   if "active_accounts" not in st.session_state:
     st.session_state.active_accounts = True
     
-def status_action(record_id, action:str):
-    st.warning(f"Are you sure you want to {action} account with ID: **{record_id}**?")
+def status_action(account_id, action:str):
+    st.warning(f"Are you sure you want to {action} account with ID: **{account_id}**?")
     
     col1, col2 = st.columns([1, 1], vertical_alignment="center")
     status = False
@@ -31,7 +31,7 @@ def status_action(record_id, action:str):
         if st.button("Confirm action", key=f"confirm_user_{action}_btn", use_container_width=True):
             try:
                 with get_db() as db:
-                    User.update(db, record_id, { "active": 1 if action == "activate" else 0 })
+                    User.update(db, account_id, { "active": 1 if action == "activate" else 0 })
                     status = True
             except Exception as e:
                 st.write(e)
@@ -42,20 +42,20 @@ def status_action(record_id, action:str):
             st.rerun()
             
     if status:
-        st.success(f"Record {action}d successfully!")
+        st.success(f"Account {action}d successfully!")
         st.session_state.selected_row = {}
         time.sleep(1.5)
         st.rerun()
 
 @st.dialog("Dactivate Account", dismissible=True, on_dismiss="ignore")
-def deactivate_form(record_id):                
-    status_action(record_id, "deactivate")
+def deactivate_form(account_id):                
+    status_action(account_id, "deactivate")
     
 @st.dialog("Activate Account", dismissible=True, on_dismiss="ignore")
-def activate_form(record_id):                
-    status_action(record_id, "activate")
+def activate_form(account_id):                
+    status_action(account_id, "activate")
 
-@st.dialog("Create Record", dismissible=True, on_dismiss="rerun")
+@st.dialog("Create Account", dismissible=True, on_dismiss="rerun")
 def create_form():
     form_data = { "created_by": st.session_state.user_id}
     form_data["full_name"] = st.text_input("Full Name*", placeholder="Enter your full name")
@@ -114,6 +114,7 @@ def show_datatable(create_btn_placeholder):
         gb.configure_column(field="active", hide=True)
         gb.configure_column(field="id", header_name="ID")
         gb.configure_column(field="email", header_name="Email")
+        gb.configure_column(field="role", header_name="Role")
         gb.configure_column(field="full_name", header_name="Full Name")
         gb.configure_column(field="created_by", header_name="Created by")
         gb.configure_column(field="created_by", header_name="Created by")
@@ -147,20 +148,20 @@ def show_datatable(create_btn_placeholder):
     # Show action buttons for selected row
     with action_placeholder.container():
         if st.session_state.selected_row:
-            record_id = st.session_state.selected_row.get("id")
-            if record_id:
+            account_id = st.session_state.selected_row.get("id")
+            if account_id:
                 col1, _ = st.columns([1, 1], vertical_alignment="center")
                 with col1:
                     if st.session_state.active_accounts:
                         if st.button("Deactivate Account", icon=":material/cancel:", key="deactivate_user_btn"):
-                            deactivate_form(record_id)
+                            deactivate_form(account_id)
                     else:
                         if st.button("Activate Account", icon=":material/check:", key="activate_user_btn"):
-                            activate_form(record_id)
+                            activate_form(account_id)
                         
     with create_btn_placeholder.container():
         if not st.session_state.selected_row :
-            if st.button("New Record", key="create", icon=":material/add:", use_container_width=True):
+            if st.button("New User", key="create", icon=":material/add:", use_container_width=True):
                 st.session_state.selected_row = {}
                 create_form()  
 
