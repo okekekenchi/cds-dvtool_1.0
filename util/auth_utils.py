@@ -37,7 +37,7 @@ def logout(cookies=None):
     
     clear_cookies(cookies)
     time.sleep(0.5)
-
+        
 def login(email, password):
     with get_db() as db:
         user = User.findByEmail(db, email)
@@ -54,6 +54,7 @@ def login(email, password):
         sessions = SessionManager()
         if sessions.auth_session(st.session_state.session_id, user.id):
             st.session_state.user_id = user.id
+            st.session_state.user_email = user.email
             st.session_state.user_role = user.role
             return True
         
@@ -72,7 +73,24 @@ def hash_password(password):
 def verify_password(plain_password, hashed_password):
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-# User management
+def change_password(user_id, password: dict):
+    try:
+        with get_db() as db:
+            user = User.find(db, user_id)
+            
+            if user:
+                if verify_password(password["current"], user.password):
+                    User.update(
+                        db, user_id,
+                        { "password": hash_password(password["new"]) }
+                    )
+                else:
+                    st.warning("Invalid current password.")
+            else:
+                st.warning("Failed to load user")
+    except Exception as e:
+        st.warning("Failed to change password")
+        
 def create_user(full_name, email, password, role):
     with get_db() as db:
         # Create a user
@@ -118,10 +136,16 @@ def handle_session(user_id=None, forrce_new=False):
 def auth():
     """Checks if the user is authenticated"""
     if 'user_id' in st.session_state and st.session_state.user_id:
-        return True
+        user_id = st.session_state.user_id
     
     session = handle_session()
-    return True if session and session['user_id'] else False
+    if session and session['user_id']:
+        user_id = session['user_id']
+    else:
+        return False
+    
+    with get_db() as db:
+        return User.find(db, user_id)
 
 # Authentication decorator
 def authenticated(func):
@@ -157,9 +181,9 @@ def requires_any_role(*required_roles):
         @wraps(func)
         @authenticated
         def wrapper(*args, **kwargs):
-            user_role = st.session_state.get('user_role', None)
+            user = auth()
             
-            if user_role not in required_roles:
+            if user.role not in required_roles:
                 st.error("You don't have the required role to access this page.")
                 st.stop()
                 return

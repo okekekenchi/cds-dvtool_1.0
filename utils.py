@@ -1,8 +1,9 @@
 import sqlite3
 import streamlit as st
-from loader.config_loader import config
 import importlib
 from models.base import BaseModel
+from datetime import datetime, timezone
+from loader.config_loader import config
 
 system_tables = ["users","sessions","project_logs","validation_checklists"]
 system_fields = ["created_by", "created_at", "updated_at"]
@@ -35,3 +36,10 @@ def get_model_class(model_name) -> BaseModel:
 @st.dialog("Info", dismissible=True, on_dismiss="ignore")
 def alert(msg):
     st.warning(msg)
+    
+def format_datetime(timestamp: str):
+    dt = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S.%f")
+    dt_utc = dt.replace(tzinfo=timezone.utc)  # Mark as UTC time
+    dt_local = dt_utc.astimezone()  # Convert to local timezon
+    return dt_local.strftime("%B %d, %Y at %I:%M %p")
+ 

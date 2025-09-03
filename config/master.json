@@ -23,7 +23,7 @@
         "code": "Q003",
         "name": "H task without replacement spare",
         "description": "This query identifies where there is a record in table CA with a TASKCDCA starting 'H' but no child record exists in table CI for the same LSACONXB & ALTLCNXB.",
-        "config": {"sheets": [{"name": "CA"}, {"name": "CI", "col_operations": [{"value_2": "tsk_merged", "column": "tsklcnci", "operator": "merge", "value_1": "tskalcci"}, {"value_2": "pro_merged", "column": "prolcnci", "operator": "merge", "value_1": "proalcci"}]}], "joins": [{"left_table": "CA", "join_type": "a_left", "right_table": "CI", "on_cols": [{"left_column": "lsaconxb", "right_column": "tsklcnci"}, {"left_column": "altlcnxb", "right_column": "tskalcci"}, {"left_column": "taskcdca", "right_column": "tsktcdci"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "taskcdca", "operator": "starts_with", "value_1": "H", "logic": "And"}, {"value_2": null, "column": "tsk_merged", "operator": "column_not_equals", "value_1": "pro_merged", "column_char": 0, "logic": "And"}], "log": {"columns": ["eiacodxa", "lsaconxb", "altlcnxb", "taskcdca"]}}
+        "config": {"sheets": [{"name": "CA"}, {"name": "CI", "col_operations": [{"value_2": "tsk_merged", "column": "tsklcnci", "operator": "merge", "value_1": "tskalcci"}, {"value_2": "pro_merged", "column": "prolcnci", "operator": "merge", "value_1": "proalcci"}]}], "joins": [{"left_table": "CA", "join_type": "left", "right_table": "CI", "on_cols": [{"left_column": "lsaconxb", "right_column": "tsklcnci"}, {"left_column": "altlcnxb", "right_column": "tskalcci"}, {"left_column": "taskcdca", "right_column": "tsktcdci"}]}], "col_operations": [], "conditions": [{"value_2": null, "column": "taskcdca", "operator": "starts_with", "value_1": "H", "logic": "And"}, {"value_2": null, "column": "tsk_merged", "operator": "column_not_equals", "value_1": "pro_merged", "column_char": 0, "logic": "And"}], "log": {"columns": ["eiacodxa", "lsaconxb", "altlcnxb", "taskcdca"]}}
       },
       {
         "code": "Q004",
@@ -77,7 +77,7 @@
         "code": "Q012",
         "name": "Same NSN different PNR",
         "description": "Nato Stock Number (NSN). Part Number Record (PNR). This query identifies where a record exists in table HA where the NSN is identical but the REFNUMHA codes differ.",
-        "config": {"sheets": [{"name": "HA", "col_operations": [{"value_2": "NSN", "column": "fscnsnha", "operator": "merge", "value_1": "niinsnha"}]}], "joins": [], "conditions": [{"value_2": null, "column": "NSN", "operator": "non_distinct_combinations", "value_1": "refnumha", "logic": "And"}], "col_operations": [{"value_2": "NSN", "column": "fscnsnha", "operator": "merge", "value_1": "niinsnha"}], "log": {"columns": ["eiacodxa", "cagecdxh", "refnumha", "fscnsnha", "niinsnha"]}}
+        "config": {"sheets": [{"name": "HA", "col_operations": [{"value_2": "NSN", "column": "fscnsnha", "operator": "merge", "value_1": "niinsnha"}]}], "joins": [], "conditions": [{"value_2": null, "column": "NSN", "operator": "non_distinct_combinations", "value_1": "refnumha", "logic": "And"}, {"value_2": null, "column": "niinsnha", "operator": "not_null", "value_1": null, "logic": "And"}], "col_operations": [{"value_2": "NSN", "column": "fscnsnha", "operator": "merge", "value_1": "niinsnha"}], "log": {"columns": ["eiacodxa", "cagecdxh", "refnumha", "fscnsnha", "niinsnha"]}}
       },
       {
         "code": "Q013",

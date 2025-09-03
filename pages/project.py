@@ -1,14 +1,14 @@
-import importlib
-import sys
+# import importlib
+# import sys
 
-def reload_package(package_name: str):
-    for name in list(sys.modules):
-        if name == package_name or name.startswith(f"{package_name}."):
-            importlib.reload(sys.modules[name])
+# def reload_package(package_name: str):
+#     for name in list(sys.modules):
+#         if name == package_name or name.startswith(f"{package_name}."):
+#             importlib.reload(sys.modules[name])
 
-reload_package("components.project.create")
-reload_package("components.project.report")
-reload_package("components.project.log")
+# reload_package("components.project.create")
+# reload_package("components.project.report")
+# reload_package("components.project.log")
 
 import streamlit as st
 from loader.css_loader import load_css
@@ -24,10 +24,7 @@ st.set_page_config(page_title="Project", page_icon=":material/folder:",
 load_css('assets/css/project.css')
 
 @authenticated
-def main():
-    st.title("Project")
-    side_nav()
-    
+def main():    
     create_tab, report_tab, log_tab = st.tabs(["Create Project", "Report", "Project Log"])
     
     with create_tab:
@@ -42,5 +39,7 @@ def main():
 if __name__ == "__main__":
     init_db()
     st.session_state.current_page = "pages/project.py"
+    st.markdown("""<h2>Projects</h2>""", unsafe_allow_html=True)
+    side_nav()
     main()
     

@@ -1,6 +1,6 @@
 import copy
 import streamlit as st
-from util.auth_utils import authenticated
+from util.auth_utils import requires_any_role
 from utils import get_model_class, system_tables, system_fields, bool_fields, required_fields, textarea_fields
 from components.side_nav import side_nav
 from loader.config_loader import config
@@ -219,15 +219,9 @@ def reset_params():
     st.session_state.new_record = False
     st.session_state.selected_row = {}
 
-@authenticated
+@requires_any_role("admin")
 def main():
-    st.title("Master Records")
-    side_nav()
     init_session_var()
-    
-    st.write('')
-    st.write('')
-    st.write('')
     
     col1, col2, col3, col4 = st.columns([0.35, 0.3, 0.15, 0.2], vertical_alignment="bottom")
     with col1:
@@ -274,5 +268,7 @@ def main():
 if __name__ == "__main__":
     init_db()
     st.session_state.current_page = "pages/masters.py"
+    st.markdown("""<h2>Master Records</h2>""", unsafe_allow_html=True)
+    side_nav()
     main()
     

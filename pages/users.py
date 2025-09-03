@@ -170,14 +170,8 @@ def reset_params():
 
 @authenticated
 def main():
-    st.title("User Accounts")
-    side_nav()
     init_session_var()
-    
-    st.write('')
-    st.write('')
-    st.write('')
-    
+        
     col1, col2, col3 = st.columns([0.35, 0.3, 0.15], vertical_alignment="bottom")
     with col1:
         st.text_input(
@@ -205,5 +199,7 @@ def main():
 if __name__ == "__main__":
     init_db()
     st.session_state.current_page = "pages/users.py"
+    st.markdown("""<h2>User Accounts</h2>""", unsafe_allow_html=True)
+    side_nav()
     main()
     

@@ -1,56 +1,84 @@
-/* Main styling */
-.stApp {
-    background-color: white;
-    font-family: 'Arial', sans-serif;
+.stMainBlockContainer {
+    padding: 0px 30px;
+    padding-bottom: 30px;
 }
 
-/* Form styling */
-.stTextInput>div>div>input, 
-.stPassword>div>div>input {
-    border-radius: 5px;
-    padding: 10px;
-    border: 1px solid #ddd;
+.stHeading {
+    position: absolute;
+    z-index: 1000000;
+    top: -5px;
+    left: -2px;
 }
 
-/* Link styling */
-a {
-    color: #e83757;
+.stAppHeader {
+    height: 20px !important;
+    min-height: 40px;
+}
+
+iframe {
+    display: none;
+}
+
+.st-emotion-cache-1v0mbdj {
+    border-radius: 50%;
+    /* border: 2px solid #e83757; */
+}
+
+.st-emotion-cache-1v0mbdj img {
+    border-radius: 50%;
+}
+
+.stButton > button {
+    color: white;
+    padding: 10px 24px;
+    text-align: center;
     text-decoration: none;
-}
-
-a:hover {
-    text-decoration: underline;
-}
-
-/* Error message styling */
-.error-message {
-    color: #f44336;
-    font-size: 14px;
-    margin-top: 5px;
-}
-
-/* Button styling */
-.stButton>button {
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
     background-color: #e83757;
-    color: white !important;
-    border: none !important;
-    border-radius: 5px;
-    /* padding: 10px 24px !important; */
 }
 
 .stButton>button:hover {
-    background-color: #d12b4a;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    background-color: #381338 !important;
+    color: white !important;
 }
 
-.stButton>button:active {
-    transform: translateY(0);
+.st-emotion-cache-1rwb540 {
+    height: 30px;
+    min-height: 31px;
+    justify-self: end !important;
+    width: -webkit-fill-available;
 }
 
-/* Input field styling */
-.stTextInput>div>div>input, 
-.stPassword>div>div>input {
-    border-radius: 5px !important;
-    padding: 10px !important;
+.st-emotion-cache-1t02cvl {
+    align-content: end;
+}
+
+.st-emotion-cache-bfgnao > p {
+    font-weight: bold;
+}
+
+/* button[aria-label="Close"] {
+    display: none !important;
+} */
+
+.st-emotion-cache-8atqhb {
+    justify-items: normal !important;
+}
+
+.stFileUploader {
+    width: -webkit-fill-available;
+}
+
+.stTabs > div {
+    width: -webkit-fill-available !important;
+}
+
+div[data-testid="stExpanderDetails"] {
+    min-height: 200px;
+}
+
+div[data-testid="stMetricValue"] {
+    font-size: 1.5em;
 }
