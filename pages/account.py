@@ -89,7 +89,7 @@ def edit_profile(user):
         
         st.text_input(
             "New Password *", type="password",
-            placeholder="Enter new password (optional)", key="new"
+            placeholder="Enter new password", key="new"
         )
         
         st.text_input(
