@@ -18,7 +18,7 @@ load_css('assets/css/project.css')
 
 TABLE_NAME: Final[str] = "validation_checklists"
 STATUS_OPTIONS: Final[dict[int, str]] = {1: "Active", 0: "Inactive"}
-COLUMNS_TO_HIDE: Final[list[str]] = ["id", "active", "config", "tags"]
+COLUMNS_TO_HIDE: Final[list[str]] = ["active", "config", "tags"]
 
 checklist = {
     'code': '',
@@ -190,6 +190,7 @@ def view_checklist():
     gb.configure_pagination(paginationAutoPageSize=False)
     gb.configure_default_column(editable=False, filterable=False, sortable=True, resizable=True, width=250)
     gb.configure_grid_options(domLayout='normal')
+    gb.configure_column(field="id", header_name="ID")
     gb.configure_column(field="created_by", header_name="Created by")
     gb.configure_column(field="created_by", header_name="Created by")
     gb.configure_column(field="created_at", header_name="Created at", valueFormatter="new Date(data.created_at).toLocaleString()")

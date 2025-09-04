@@ -146,7 +146,7 @@ def show_datatable(create_btn_placeholder):
         gb.configure_default_column(editable=False, filterable=False, sortable=True, resizable=True, width=250)
         gb.configure_grid_options(domLayout='normal')
         
-        columns_to_hide = ["id", "active", "config"]
+        columns_to_hide = ["active", "config"]
         for column in columns_to_hide:
             if column in df:
                 gb.configure_column(field=column, hide=True)
