@@ -140,8 +140,8 @@ def save_checklist():
     try:
         if can_save():
             created = False
-            checklist = copy.deepcopy(st.session_state.checklist)
-            checklist['config'] = copy.deepcopy(st.session_state.config)
+            checklist = st.session_state.checklist
+            checklist['config'] = st.session_state.config
             checklist['created_by'] = st.session_state.user_id
             
             for key in ['workbook','sheets']:
@@ -161,12 +161,14 @@ def save_checklist():
                     st.session_state.get('checklist_search_query', '')
                 )
                 
-                st.rerun(scope='fragment')
+                reset_form()                
+                st.rerun()
             else:
                 alert('Error: Could not create record')
     except IntegrityError:
         st.toast("The 'Code' and 'Name' provided must be unique")
     except Exception as e:
+        st.write(e)
         st.toast(f"Error creating record: {e}")
         
 def reset_form():
