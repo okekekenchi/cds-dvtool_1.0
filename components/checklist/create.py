@@ -16,35 +16,71 @@ from models.tag import Tag
 from database.database import get_db
 from sqlalchemy.exc import IntegrityError
 from models.validation_checklist import ValidationChecklist
+from services.checklist_service import load_data_with_retry
 from components.checklist.configuration import configure_checklist
 from services.workbook_service import load_data
+from typing import Final
 
+TABLE_NAME: Final[str] = "validation_checklists"
 
-def init_session_var():
-    selected_checklist = copy.deepcopy(st.session_state.selected_checklist)
-    
+checklist = {
+    'code': '',
+    'name': '',
+    'description': '',
+    'tags': [],
+    'workbook': None,
+    'sheets': {},
+    'active': True,
+    'config': {}
+}
+
+config = {
+    'sheets': [],
+    'joins': [],
+    'col_operations': [],
+    'conditions': []
+}
+
+def init_session_var():   
     if 'checklist' not in st.session_state:
-        st.session_state.checklist = selected_checklist
+        st.session_state.checklist = copy.deepcopy(checklist)
     if 'config' not in st.session_state:
-        st.session_state.config = selected_checklist.get('config')
+        st.session_state.config = copy.deepcopy(config)
     
+    if 'reset_inputs' not in st.session_state:
+        st.session_state.reset_inputs = False
     if 'list_type' not in st.session_state:
         st.session_state.list_type = None
     if 'list_source_str' not in st.session_state:
         st.session_state.list_source_str = None
 
-def init_form():
+def reset_inputs():
     st.session_state.checklist_code = None
     st.session_state.checklist_name = None
     st.session_state.checklist_description = None
+    st.session_state.checklist_active = 1
     st.session_state.checklist_tags = []
-    st.session_state.checklist_active = True
+    st.session_state.reset_inputs = False
+
+def init_form():
+    reset_form()
+    reset_inputs()    
 
 def load_tags():
-    with get_db() as db:
-        return Tag.where(db, ["id","name"])
+    try:
+        with get_db() as db:
+            result = Tag.where(db, ["id","name"])
+            if result is None:
+                return []
+            return list(result) if hasattr(result, '__iter__') else []
+    except Exception as e:
+        print(f"Error loading tags: {e}")
+        return []
     
-def form_inputs():  
+def form_inputs():
+    if st.session_state.reset_inputs:
+        reset_inputs()
+        
     col11, col12 = st.columns([0.3, 0.7], vertical_alignment='center')
     with col11:
         st.session_state.checklist['code'] = st.text_input(
@@ -62,7 +98,7 @@ def form_inputs():
     col31, col32 = st.columns([0.8, 0.2], vertical_alignment='center')
     
     tags_options = { tag['id']: tag['name'] for tag in load_tags() }
-
+    
     with col31:
         st.session_state.checklist['tags'] = st.multiselect(
                                                 "Link Tags",
@@ -83,7 +119,9 @@ def form_action():
     with col2:
         if st.button("Reset Form", key="reset_checklist_form",
                   icon=":material/refresh:", use_container_width=True):
+            st.session_state.reset_inputs = True
             reset_form()
+            st.rerun(scope='fragment')
 
 def can_save() -> bool:
     if not st.session_state.uploaded_file:
@@ -114,8 +152,16 @@ def save_checklist():
             
             if created:
                 st.toast("Record created successfully", icon=":material/check_circle:")
-                reset_form()
-                st.rerun()
+                
+                if 'data' in st.session_state:
+                    del st.session_state.data
+                    
+                st.session_state.data = load_data_with_retry(
+                    TABLE_NAME,
+                    st.session_state.get('checklist_search_query', '')
+                )
+                
+                st.rerun(scope='fragment')
             else:
                 alert('Error: Could not create record')
     except IntegrityError:
@@ -125,8 +171,8 @@ def save_checklist():
         
 def reset_form():
     st.session_state.update({ 
-        "checklist": checklist,
-        "config": config,
+        "checklist": copy.deepcopy(checklist),
+        "config": copy.deepcopy(config),
         "list_type": None,
         "list_source_str": None
     })
@@ -139,16 +185,15 @@ def upload_workbook():
         type=["xlsx", "xls"], key="uploaded_file",
         help="Upload an Excel workbook containing your data sheets.",
     )
-    
-    # st.markdown("<style>button { max-width:150px; }</style>", unsafe_allow_html=True)
-    
+        
     if st.session_state.uploaded_file:
         file, sheets, tables = load_data(st.session_state.uploaded_file)
+        sheets_and_tables = sheets | tables
         
         st.session_state.checklist.update({
             'workbook': file,
             'only_sheets': sheets,
-            'sheets': sheets | tables,
+            'sheets': sheets_and_tables,
             "list_type": None,
             "list_source_str": None
         })
@@ -179,6 +224,6 @@ def create_checklist():
     
     st.divider()
     
-    if workbook:
+    if workbook and st.session_state.config:
        configure_checklist(st.session_state.config)
                 

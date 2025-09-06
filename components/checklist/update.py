@@ -10,14 +10,13 @@ reload_package("components.checklist.configuration")
 reload_package("services.workbook_service")
 
 import copy
-import pandas as pd
 import streamlit as st
 from utils import alert
-from services.checklist_service import load_data_with_retry
 from models.tag import Tag
 from database.database import get_db
 from sqlalchemy.exc import IntegrityError
 from models.validation_checklist import ValidationChecklist
+from services.checklist_service import load_data_with_retry
 from components.checklist.configuration import configure_checklist
 from services.workbook_service import load_data
 from typing import Final
@@ -53,8 +52,15 @@ def init_form():
     reset_inputs()
 
 def load_tags():
-    with get_db() as db:
-        return Tag.where(db, ["id","name"])
+    try:
+        with get_db() as db:
+            result = Tag.where(db, ["id","name"])
+            if result is None:
+                return []
+            return list(result) if hasattr(result, '__iter__') else []
+    except Exception as e:
+        print(f"Error loading tags: {e}")
+        return []
 
 def form_inputs():
     if st.session_state.reset_inputs:
@@ -82,7 +88,7 @@ def form_inputs():
         st.session_state.checklist['tags'] = st.multiselect(
                                                 "Link Tags",
                                                 key="checklist_tags",
-                                                options=tags_options.keys(),
+                                                options=tags_options.keys() or [],
                                                 format_func=lambda x: tags_options[x],
                                                 help="Use tags for easy retrieval and categorization")
     with col32:
@@ -161,7 +167,7 @@ def reset_form():
         "list_source_str": None
     })
     
-    st.session_state.reset_form = False    
+    st.session_state.reset_form = False
 
 def upload_workbook():
     f_ = st.file_uploader(
@@ -169,9 +175,7 @@ def upload_workbook():
         type=["xlsx", "xls"], key="uploaded_file",
         help="Upload an Excel workbook containing your data sheets."
     )
-    
-    # st.markdown("<style>button { max-width:150px; }</style>", unsafe_allow_html=True)
-    
+        
     if st.session_state.uploaded_file:
         file, sheets, tables = load_data(st.session_state.uploaded_file)
         sheets_and_tables = sheets | tables
@@ -198,6 +202,7 @@ def update_checklist():
     
     if st.session_state.reset_form:
         init_form()
+        st.session_state.reset_form = False
         
     col1, col2 = st.columns([1,1], border=True, vertical_alignment='center')
     
@@ -213,5 +218,5 @@ def update_checklist():
     
     st.divider()
     
-    if workbook:
+    if workbook and st.session_state.config:
         configure_checklist(st.session_state.config)

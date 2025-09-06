@@ -143,8 +143,8 @@ def handle_selection_change(selected_rows: list[dict]):
         if st.session_state.selected_checklist.get("id", None) != None:
             if st.session_state.selected_checklist.get('id'):
                 st.session_state.reset_form = True # Reset form for create
-                st.session_state.config = copy.deepcopy(config)
-                st.session_state.selected_checklist = copy.deepcopy(checklist)
+            st.session_state.config = copy.deepcopy(config)
+            st.session_state.selected_checklist = copy.deepcopy(checklist)
             st.rerun()
  
 

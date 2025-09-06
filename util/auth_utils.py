@@ -120,18 +120,22 @@ def email_exists(email):
 
 def handle_session(user_id=None, forrce_new=False):
     """Returns the session of the curent user"""
-    sessions = SessionManager()
-    if 'session_id' not in st.session_state: # fresh page load
-        cookies = init_session_cookie()
-        session = set_session_cookie(sessions=sessions, cookies=cookies,
-                                     user_id=user_id, force_new_cookie=forrce_new)
-    else:
-        session = sessions.get_session(st.session_state.session_id)
-    
-    if not session: # session exists in browser but not in DB
-        session = set_session_cookie(sessions=sessions, cookies=cookies, force_new_cookie=True)
+    try:
+        sessions = SessionManager()
+        if 'session_id' not in st.session_state: # fresh page load
+            cookies = init_session_cookie()
+            session = set_session_cookie(sessions=sessions, cookies=cookies,
+                                        user_id=user_id, force_new_cookie=forrce_new)
+        else:
+            session = sessions.get_session(st.session_state.session_id)
         
-    return session
+        if not session: # session exists in browser but not in DB
+            session = set_session_cookie(sessions=sessions, cookies=cookies, force_new_cookie=True)
+            
+        return session
+    except Exception as ex:
+        logout()
+        st.warning("Refresh page.")
 
 def auth():
     """Checks if the user is authenticated"""

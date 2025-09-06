@@ -5,9 +5,9 @@ class BhTaskTypeVsMb(BaseModel):
     __tablename__ = "bh_task_type_vs_mbs"
     
     task_type = Column(String, unique=True, nullable=False)
-    desc = Column(Text, unique=True)
-    meas_base = Column(String, unique=True, nullable=False)
-    mb_desc = Column(String, nullable=False)
+    desc = Column(Text)
+    meas_base = Column(Text, unique=True, nullable=False)
+    mb_desc = Column(Text, nullable=False)
     active = Column(Boolean, default=True, index=True)
     created_by = Column(Integer)
     

@@ -1,3 +1,17 @@
+import importlib
+import sys
+
+def reload_package(package_name: str):
+    for name in list(sys.modules):
+        if name == package_name or name.startswith(f"{package_name}."):
+            importlib.reload(sys.modules[name])
+
+reload_package("components.checklist.create")
+reload_package("components.checklist.update")
+reload_package("components.checklist.view")
+
+
+
 import streamlit as st
 from loader.css_loader import load_css
 from database.migration import init_db
