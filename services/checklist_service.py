@@ -19,7 +19,6 @@ def load_data_with_retry(
             time.sleep(1 * (attempt + 1))
     
     if df.empty:
-        st.warning("No records found")
         return pd.DataFrame()
     
     user_map = get_user_mapping()

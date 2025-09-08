@@ -27,7 +27,7 @@ checklist = {
     'tags': [],
     'workbook': None,
     'sheets': {},
-    'active': True,
+    'active': 1,
     'config': {}
 }
 
@@ -98,17 +98,17 @@ def delete_checklist_form(record_id):
 
     st.warning(f"Are you sure you want to delete this record: {record_code}?")
     
-    col1, col2 = st.columns([2, 1], vertical_alignment='center', use_container_width=True)
+    col1, col2 = st.columns([1, 1], vertical_alignment='center')
     deleted = False
     with col1:
-        if st.button("Delete", key="confirm_delete_checklist"):
+        if st.button("Delete", key="confirm_delete_checklist", use_container_width=True):
             try:
                 delete_record(TABLE_NAME, record_id)
                 deleted = True
             except Exception as e:
                 st.error(f"Error deleting record: {e}")
     with col2:
-        if st.button("Cancel", key="cancel_delete_checklist"):
+        if st.button("Cancel", key="cancel_delete_checklist", use_container_width=True):
             st.session_state.selected_checklist = {}
             st.rerun()
             

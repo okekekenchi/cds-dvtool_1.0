@@ -106,44 +106,43 @@ def show_datatable(create_btn_placeholder):
         st.error(f"Error loading data: {str(e)}")
         return pd.DataFrame()
     
-    if not df.empty:
-        gb = GridOptionsBuilder.from_dataframe(df)
-        gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=10)
-        gb.configure_default_column(editable=False, filterable=False, sortable=True, resizable=True, width=250)
-        gb.configure_grid_options(domLayout='normal')
-        gb.configure_column(field="active", hide=True)
-        gb.configure_column(field="id", header_name="ID")
-        gb.configure_column(field="email", header_name="Email")
-        gb.configure_column(field="role", header_name="Role")
-        gb.configure_column(field="full_name", header_name="Full Name")
-        gb.configure_column(field="created_by", header_name="Created by")
-        gb.configure_column(field="created_by", header_name="Created by")
-        gb.configure_column(field="created_at", header_name="Created at", valueFormatter="new Date(data.created_at).toLocaleString()")
-        gb.configure_column(field="updated_at", header_name="Updated at", valueFormatter="new Date(data.updated_at).toLocaleString()")
-        gb.configure_selection(selection_mode='single', use_checkbox=True)
-                    
-        # Display the grid
-        grid_response = AgGrid(
-            df,
-            gridOptions=gb.build(),
-            update_mode=GridUpdateMode.SELECTION_CHANGED,
-            theme='streamlit',
-            enable_enterprise_modules=True,
-            sidebar=True,
-            fit_columns_on_grid_load=True
-        )
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=10)
+    gb.configure_default_column(editable=False, filterable=False, sortable=True, resizable=True, width=250)
+    gb.configure_grid_options(domLayout='normal')
+    gb.configure_column(field="active", hide=True)
+    gb.configure_column(field="id", header_name="ID")
+    gb.configure_column(field="email", header_name="Email")
+    gb.configure_column(field="role", header_name="Role")
+    gb.configure_column(field="full_name", header_name="Full Name")
+    gb.configure_column(field="created_by", header_name="Created by")
+    gb.configure_column(field="created_by", header_name="Created by")
+    gb.configure_column(field="created_at", header_name="Created at", valueFormatter="new Date(data.created_at).toLocaleString()")
+    gb.configure_column(field="updated_at", header_name="Updated at", valueFormatter="new Date(data.updated_at).toLocaleString()")
+    gb.configure_selection(selection_mode='single', use_checkbox=True)
+                
+    # Display the grid
+    grid_response = AgGrid(
+        df,
+        gridOptions=gb.build(),
+        update_mode=GridUpdateMode.SELECTION_CHANGED,
+        theme='streamlit',
+        enable_enterprise_modules=True,
+        sidebar=True,
+        fit_columns_on_grid_load=True
+    )
+    
+    # Handle row selection for editing
+    selected_rows = grid_response.get("selected_rows", [])
+    
+    # Convert to list of dicts if it's a DataFrame
+    if hasattr(selected_rows, 'to_dict'):
+        selected_rows = selected_rows.to_dict('records')
         
-        # Handle row selection for editing
-        selected_rows = grid_response.get("selected_rows", [])
-        
-        # Convert to list of dicts if it's a DataFrame
-        if hasattr(selected_rows, 'to_dict'):
-            selected_rows = selected_rows.to_dict('records')
-            
-        if isinstance(selected_rows, list) and len(selected_rows) > 0:
-            st.session_state.selected_row = selected_rows[0]
-        else:
-            st.session_state.selected_row = {}
+    if isinstance(selected_rows, list) and len(selected_rows) > 0:
+        st.session_state.selected_row = selected_rows[0]
+    else:
+        st.session_state.selected_row = {}
         
     # Show action buttons for selected row
     with action_placeholder.container():
@@ -172,7 +171,7 @@ def reset_params():
 def main():
     init_session_var()
         
-    col1, col2, col3 = st.columns([0.35, 0.3, 0.15], vertical_alignment="bottom")
+    col1, col2, _, col3 = st.columns([0.4, 0.25, 0.2,0.15], vertical_alignment="bottom")
     with col1:
         st.text_input(
             "Search Records:",

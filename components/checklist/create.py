@@ -30,7 +30,7 @@ checklist = {
     'tags': [],
     'workbook': None,
     'sheets': {},
-    'active': True,
+    'active': 1,
     'config': {}
 }
 

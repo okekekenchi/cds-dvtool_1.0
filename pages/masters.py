@@ -139,50 +139,47 @@ def show_datatable(create_btn_placeholder):
     user_id = st.session_state.user_id
     df['created_by'] = df['created_by'].map(lambda x: "Me" if x == user_id else user_map.get(x, "System")).fillna("System").replace("", "System")
 
-    if not df.empty:
-        # Configure tablez
-        gb = GridOptionsBuilder.from_dataframe(df)
-        gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=10)
-        gb.configure_default_column(editable=False, filterable=False, sortable=True, resizable=True, width=250)
-        gb.configure_grid_options(domLayout='normal')
+    # Configure tablez
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_pagination(paginationAutoPageSize=False, paginationPageSize=10)
+    gb.configure_default_column(editable=False, filterable=False, sortable=True, resizable=True, width=250)
+    gb.configure_grid_options(domLayout='normal')
+    
+    columns_to_hide = ["active", "config"]
+    for column in columns_to_hide:
+        if column in df:
+            gb.configure_column(field=column, hide=True)
         
-        columns_to_hide = ["active", "config"]
-        for column in columns_to_hide:
-            if column in df:
-                gb.configure_column(field=column, hide=True)
-            
-        gb.configure_column(field="created_by", header_name="Created by")
-        gb.configure_column(field="created_by", header_name="Created by")
-        gb.configure_column(field="created_at", header_name="Created at", valueFormatter="new Date(data.created_at).toLocaleString()")
-        gb.configure_column(field="updated_at", header_name="Updated at", valueFormatter="new Date(data.updated_at).toLocaleString()")
-        gb.configure_selection(selection_mode='single', use_checkbox=True)
-                    
-        # Display the grid
-        grid_response = AgGrid(
-            df,
-            gridOptions=gb.build(),
-            update_mode=GridUpdateMode.SELECTION_CHANGED,
-            theme='streamlit',
-            enable_enterprise_modules=True,
-            sidebar=True,
-            fit_columns_on_grid_load=True
-        )
-        
-        # Handle row selection for editing
-        selected_rows = grid_response.get("selected_rows", [])
-        
-        # Convert to list of dicts if it's a DataFrame
-        if hasattr(selected_rows, 'to_dict'):
-            selected_rows = selected_rows.to_dict('records')
+    gb.configure_column(field="created_by", header_name="Created by")
+    gb.configure_column(field="created_by", header_name="Created by")
+    gb.configure_column(field="created_at", header_name="Created at", valueFormatter="new Date(data.created_at).toLocaleString()")
+    gb.configure_column(field="updated_at", header_name="Updated at", valueFormatter="new Date(data.updated_at).toLocaleString()")
+    gb.configure_selection(selection_mode='single', use_checkbox=True)
+                
+    # Display the grid
+    grid_response = AgGrid(
+        df,
+        gridOptions=gb.build(),
+        update_mode=GridUpdateMode.SELECTION_CHANGED,
+        theme='streamlit',
+        enable_enterprise_modules=True,
+        sidebar=True,
+        fit_columns_on_grid_load=True
+    )
+    
+    # Handle row selection for editing
+    selected_rows = grid_response.get("selected_rows", [])
+    
+    # Convert to list of dicts if it's a DataFrame
+    if hasattr(selected_rows, 'to_dict'):
+        selected_rows = selected_rows.to_dict('records')
 
-        # Now safely check if we have selected rows
-        if isinstance(selected_rows, list) and len(selected_rows) > 0:
-            st.session_state.selected_row = copy.deepcopy(selected_rows[0])
-            st.session_state.new_record = False
-        else:
-            st.session_state.selected_row = {}
+    # Now safely check if we have selected rows
+    if isinstance(selected_rows, list) and len(selected_rows) > 0:
+        st.session_state.selected_row = copy.deepcopy(selected_rows[0])
+        st.session_state.new_record = False
     else:
-        st.warning("No records found in this table.")
+        st.session_state.selected_row = {}
         
     # Show action buttons for selected row
     with action_placeholder.container():
