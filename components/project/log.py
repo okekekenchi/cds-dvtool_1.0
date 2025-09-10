@@ -52,6 +52,7 @@ def project_list():
         return pd.DataFrame()
     
     if st.session_state.data.empty:
+        st.info("No project log records available.")
         return
     
     # Configure tables

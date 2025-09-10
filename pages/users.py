@@ -1,7 +1,6 @@
 import time
 import pandas as pd
 import streamlit as st
-from util.auth_utils import authenticated
 from components.side_nav import side_nav
 from loader.css_loader import load_css
 from database.migration import init_db
@@ -167,7 +166,7 @@ def show_datatable(create_btn_placeholder):
 def reset_params():
     st.session_state.selected_row = {}
 
-@authenticated
+@requires_any_role("admin")
 def main():
     init_session_var()
         
