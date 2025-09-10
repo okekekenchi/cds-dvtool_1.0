@@ -62,6 +62,10 @@ a:hover {
     font-weight: bold !important;
 }
 
+.stSelectbox > label > div > p {
+    font-weight: bold !important;
+}
+
 
 .st-emotion-cache-r44huj h1 {
     padding: 0px !important;
