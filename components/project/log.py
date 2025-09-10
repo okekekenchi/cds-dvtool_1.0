@@ -49,7 +49,7 @@ def project_list():
         st.session_state.data = load_data_with_retry(table=TABLE_NAME)
     except Exception as e:
         st.error(f"Error loading data: {str(e)}")
-        return pd.DataFrame()
+        return
     
     if st.session_state.data.empty:
         st.info("No project log records available.")
