@@ -48,7 +48,7 @@ def form_action(form_data, action: str):
                     else:
                         st.error(f"Invalid action: {action}")
             except Exception as e:
-                st.error(f"Error saving record****: {e}")
+                st.error(f"Error saving record****: {str(e)}")
     with col2:
         if st.button("Cancel", key="cancel_master", use_container_width=True):
             st.session_state.new_record = False
@@ -73,7 +73,7 @@ def delete_form(record_id):
                 delete_record(st.session_state.selected_table, record_id)
                 deleted = True
             except Exception as e:
-                st.error(f"Error deleting record: {e}")
+                st.error(f"Error deleting record: {str(e)}")
     with col2:
         if st.button("Cancel", key="cancel_delete", use_container_width=True):
             st.session_state.selected_row = {}

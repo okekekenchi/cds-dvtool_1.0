@@ -34,7 +34,7 @@ def status_action(account_id, action:str):
                     status = True
             except Exception as e:
                 st.write(e)
-                st.error(f"Error deactivating account: {e}")
+                st.error(f"Error deactivating account: {str(e)}")
     with col2:
         if st.button("Cancel", key=f"cancel_{action}", use_container_width=True):
             st.session_state.selected_row = {}
@@ -73,7 +73,7 @@ def create_form():
                         saved = User.create(db, **form_data)
                 except Exception as e:
                     st.write(e)
-                    st.error(f"Error saving account****: {e}")
+                    st.error(f"Error saving account****: {str(e)}")
             else:
                 error = "The email already exist."
     with col2:

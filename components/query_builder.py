@@ -1,15 +1,3 @@
-import importlib
-import sys
-
-def reload_package(package_name: str):
-    for name in list(sys.modules):
-        if name == package_name or name.startswith(f"{package_name}."):
-            importlib.reload(sys.modules[name])
-
-reload_package("components.list_source")
-reload_package("services.query_builder_service")
-reload_package("util.project_utils")
-
 import pandas as pd
 import streamlit as st
 from utils import alert

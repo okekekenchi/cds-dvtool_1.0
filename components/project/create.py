@@ -1,15 +1,3 @@
-import importlib
-import sys
-import time
-
-def reload_package(package_name: str):
-  for name in list(sys.modules):
-    if name == package_name or name.startswith(f"{package_name}."):
-      importlib.reload(sys.modules[name])
-
-reload_package("services.workbook_service")
-reload_package("services.query_builder_service")
-
 import os
 import copy
 import pandas as pd

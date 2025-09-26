@@ -1,18 +1,3 @@
-import importlib
-import sys
-
-def reload_package(package_name: str):
-    for name in list(sys.modules):
-        if name == package_name or name.startswith(f"{package_name}."):
-            importlib.reload(sys.modules[name])
-
-reload_package("services.column_operation_service")
-reload_package("services.join_service")
-reload_package("components.select_sheets")
-reload_package("components.join_sheets")
-reload_package("components.query_builder")
-reload_package("components.log_column")
-
 import streamlit as st
 from components.join_sheets import join_sheets
 from components.query_builder import build_query
