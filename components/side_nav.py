@@ -14,8 +14,7 @@ def side_nav():
         return
 
     user = get_user_by_id(st.session_state.user_id)
-    
-    
+        
     if not user:
         return
     
